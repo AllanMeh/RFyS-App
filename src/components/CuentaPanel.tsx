@@ -5,8 +5,10 @@
 
 import React, { useState } from 'react';
 import { UserAccount, Role } from '../types';
-import { User, UserPlus, Sparkles, CheckCircle, Info, } from 'lucide-react';
+import { User, UserPlus, Sparkles, CheckCircle, Info, RefreshCw } from 'lucide-react';
 import AvatarUploader from './AvatarUploader';
+import { supabase } from '../lib/supabase';
+import { hashPin } from '../lib/authService';
 
 const compressImage = (base64Str: string, callback: (compressed: string) => void) => {
   const img = new Image();
@@ -63,6 +65,8 @@ export default function CuentaPanel({
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
   const [phone, setPhone] = useState('');
+  const [pin, setPin] = useState('');
+  const [loading, setLoading] = useState(false);
   const [registerAvatar, setRegisterAvatar] = useState('');
   const [registeredSuccess, setRegisteredSuccess] = useState(false);
   const [lastRegisteredUser, setLastRegisteredUser] = useState<UserAccount | null>(null);
@@ -132,41 +136,72 @@ export default function CuentaPanel({
     }
   };
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !username.trim() || !phone.trim()) {
+    if (!name.trim() || !username.trim() || !phone.trim() || !pin.trim()) {
       alert('Por favor, completa todos los campos.');
       return;
     }
 
-    const cleanUsername = username.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
-    const isDuplicate = users.some(u => u.username.toLowerCase() === cleanUsername);
-    if (isDuplicate) {
-      alert(`El nombre de usuario "@${cleanUsername}" ya existe. Elige otro por favor.`);
+    if (pin.trim().length < 4) {
+      alert('El PIN debe tener al menos 4 caracteres.');
       return;
     }
 
-    const newUser: UserAccount = {
-      id: `usr-${Date.now()}`,
-      name: name.trim(),
-      username: cleanUsername,
-      phone: phone.trim(),
-      role: 'Empleado', // Automatically gets "Empleado" role
-      registeredAt: new Date().toISOString(),
-      avatarUrl: registerAvatar || undefined,
-      avatar: registerAvatar || undefined
-    };
-
-    onAddUser(newUser);
-    setLastRegisteredUser(newUser);
-    setRegisteredSuccess(true);
+    const cleanUsername = username.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
     
+    setLoading(true);
 
-    // Reset fields
-    setName('');
-    setUsername('');
-    setPhone('');
-    setRegisterAvatar('');
+    try {
+      const pinHash = await hashPin(pin.trim());
+      
+      const { data, error } = await supabase.from('profiles').insert({
+        nombre: name.trim(),
+        telefono: phone.trim(),
+        usuario: cleanUsername,
+        pin_hash: pinHash,
+        rol: 'Empleado',
+        activo: true,
+        avatar_url: registerAvatar || null
+      }).select().single();
+
+      if (error) {
+        if (error.code === '23505') {
+           alert('Error: El teléfono o usuario ya están registrados en el sistema.');
+        } else {
+           alert(`Error al registrar empleado: ${error.message}`);
+        }
+        setLoading(false);
+        return;
+      }
+      
+      const newUser: UserAccount = {
+        id: data.id,
+        name: data.nombre,
+        username: data.usuario || cleanUsername,
+        phone: data.telefono,
+        role: data.rol as Role,
+        registeredAt: data.created_at,
+        avatarUrl: data.avatar_url || undefined,
+        avatar: data.avatar_url || undefined
+      };
+      
+      // Mantenemos compatibilidad con el sistema local y usuarios_pos
+      onAddUser(newUser);
+
+      setLastRegisteredUser(newUser);
+      setRegisteredSuccess(true);
+
+      setName('');
+      setUsername('');
+      setPhone('');
+      setPin('');
+      setRegisterAvatar('');
+    } catch (err: any) {
+      alert(`Error inesperado: ${err.message}`);
+    }
+
+    setLoading(false);
   };
 
   return (
@@ -389,6 +424,22 @@ export default function CuentaPanel({
                   />
                 </div>
               </div>
+
+              <div className="col-span-1 sm:col-span-2">
+                <label className="text-gray-500 dark:text-slate-400 block mb-1 font-bold">PIN de Acceso (4 dígitos):</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-2.5 text-gray-400 dark:text-slate-500">🔒</span>
+                  <input
+                    type="password"
+                    required
+                    value={pin}
+                    onChange={(e) => setPin(e.target.value)}
+                    placeholder="1234"
+                    maxLength={10}
+                    className="bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 w-full pl-8 pr-3 py-2.5 border border-gray-255 dark:border-slate-600 rounded-lg text-xs font-mono focus:outline-none focus:ring-1 focus:ring-amber-500"
+                  />
+                </div>
+              </div>
             </div>
 
             <div>
@@ -411,10 +462,11 @@ export default function CuentaPanel({
 
             <button
               type="submit"
-              className="w-full bg-[#904d00] hover:bg-amber-900 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 border border-amber-950/20 shadow-md transition-all active:scale-[0.98] cursor-pointer text-sm"
+              disabled={loading}
+              className="w-full bg-[#904d00] hover:bg-amber-900 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 border border-amber-950/20 shadow-md transition-all active:scale-[0.98] cursor-pointer text-sm disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              <Sparkles className="w-4 h-4 text-amber-200" />
-              <span>Registrarse como Empleado</span>
+              {loading ? <RefreshCw className="w-4 h-4 text-amber-200 animate-spin" /> : <Sparkles className="w-4 h-4 text-amber-200" />}
+              <span>{loading ? 'Registrando en base de datos...' : 'Registrarse como Empleado'}</span>
             </button>
           </form>
         </div>
