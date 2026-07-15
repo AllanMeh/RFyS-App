@@ -1,0 +1,10 @@
+node_modules/
+build/
+dist/
+coverage/
+.DS_Store
+*.log
+.env*
+!.env.example
+# Supabase local config (contiene project-id, no subir a Git)
+supabase/.temp/
