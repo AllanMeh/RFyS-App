@@ -13,9 +13,9 @@ export default defineConfig(() => {
         registerType: 'autoUpdate',
         includeAssets: ['icon.svg'],
         manifest: {
-          name: 'Rinconcito Frutal y Snacks',
-          short_name: 'Rinconcito Frutal',
-          description: 'PWA de Ventas y POS para Rinconcito Frutal y Snacks',
+          name: 'Rinconcito Frutal y Snacks POS',
+          short_name: 'Rinconcito Frutal y Snacks POS',
+          description: 'Rinconcito Frutal y Snacks POS',
           theme_color: '#d97706',
           background_color: '#ffffff',
           display: 'standalone',
@@ -40,8 +40,8 @@ export default defineConfig(() => {
       },
     },
     server: {
-      // HMR is disabled in AI Studio via DISABLE_HMR env var.
-      // Do not modify—file watching is disabled to prevent flickering during agent edits.
+      // HMR is disabled via DISABLE_HMR env var.
+      // Do not modify—file watching is disabled to prevent flickering.
       hmr: process.env.DISABLE_HMR !== 'true',
       // Disable file watching when DISABLE_HMR is true to save CPU during agent edits.
       watch: process.env.DISABLE_HMR === 'true' ? null : {},

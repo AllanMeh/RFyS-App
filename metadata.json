@@ -1,8 +1,6 @@
 {
-  "name": "Remix: Rinconcito Frutal y Snacks",
+  "name": "Rinconcito Frutal y Snacks POS",
   "description": "Progressive Web App (PWA) integral para la operación diaria de juguería, cafetería y comida con POS, Cocina, Entregas, Caja, Créditos y Admin.",
   "requestFramePermissions": [],
-  "majorCapabilities": [
-    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
-  ]
+  "majorCapabilities": []
 }

@@ -435,7 +435,7 @@ export default function App() {
 
   // RESET / REFRESH ALL HANDLER (Hard reset button in header)
   const handleHardReset = () => {
-    if (confirm('¿Deseas restablecer todos los datos de demostración de Rinconcito Frutal? Se perderán las ventas del día registradas.')) {
+    if (confirm('¿Deseas restablecer todos los datos iniciales de Rinconcito Frutal? Se perderán las ventas del día registradas.')) {
       localStorage.removeItem('rf_products');
       localStorage.removeItem('rf_orders');
       localStorage.removeItem('rf_clients');
