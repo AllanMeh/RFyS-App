@@ -49,7 +49,9 @@ export default function LoginScreen({ onLogin, clientAccounts, onClientLogin, on
   // Ordenar sucursales alfabéticamente
   const sortedStores = useMemo(() => {
     if (!stores) return [];
-    return [...stores].sort((a, b) => a.nombre.localeCompare(b.nombre));
+    return [...stores]
+      .filter(s => s?.name)
+      .sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
   }, [stores]);
 
   const selectedStore = sortedStores.find(s => s.id === selectedStoreId);
@@ -383,7 +385,7 @@ export default function LoginScreen({ onLogin, clientAccounts, onClientLogin, on
                       ) : (
                         <Store size={20} color="rgba(255,255,255,0.5)" />
                       )}
-                      <span>{selectedStore.nombre}</span>
+                      <span>{selectedStore.name}</span>
                     </>
                   ) : (
                     <>
@@ -435,7 +437,7 @@ export default function LoginScreen({ onLogin, clientAccounts, onClientLogin, on
                           ) : (
                             <Store size={20} color="rgba(255,255,255,0.5)" />
                           )}
-                          <span style={{ fontSize: 13, color: '#fff' }}>{store.nombre}</span>
+                          <span style={{ fontSize: 13, color: '#fff' }}>{store.name}</span>
                         </div>
                       ))
                     ) : (
