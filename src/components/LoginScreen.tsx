@@ -1,19 +1,24 @@
 /**
  * LoginScreen.tsx
- * Pantalla de inicio de sesión con Supabase mediante Teléfono y PIN.
- * Muestra login con campos simplificados sin correos ni recuperación.
+ * Pantalla de inicio de sesión dual: Cliente y Colaborador.
  */
 
 import React, { useState } from 'react';
-import { LogIn, Lock, Phone, Eye, EyeOff, RefreshCw } from 'lucide-react';
+import { LogIn, Lock, Phone, Eye, EyeOff, RefreshCw, User, Users } from 'lucide-react';
 import { loginWithPhoneAndPin } from '../lib/authService';
 import type { AuthUser } from '../lib/authService';
+import type { ClientAccount } from '../types';
 
 interface LoginScreenProps {
   onLogin: (user: AuthUser) => void;
+  clientAccounts?: ClientAccount[];
+  onClientLogin?: (client: ClientAccount) => void;
+  onAddClientAccount?: (client: ClientAccount) => Promise<void>;
 }
 
-export default function LoginScreen({ onLogin }: LoginScreenProps) {
+export default function LoginScreen({ onLogin, clientAccounts, onClientLogin, onAddClientAccount }: LoginScreenProps) {
+  const [loginMode, setLoginMode] = useState<'colaborador' | 'cliente'>('colaborador');
+  
   // Login form states
   const [telefono, setTelefono] = useState('');
   const [pin, setPin] = useState('');
@@ -21,25 +26,85 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Estados exclusivos para creación de cliente
+  const [isNewClient, setIsNewClient] = useState(false);
+  const [clientName, setClientName] = useState('');
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
     const cleanTelefono = telefono.trim();
-    if (!cleanTelefono || !pin.trim()) {
-      setError('Por favor, ingresa tu número de teléfono y PIN.');
+    if (!cleanTelefono) {
+      setError('Por favor, ingresa tu número de teléfono.');
       return;
     }
 
-    setLoading(true);
-    const result = await loginWithPhoneAndPin(cleanTelefono, pin.trim());
-    setLoading(false);
+    if (loginMode === 'colaborador') {
+      if (!pin.trim()) {
+        setError('Por favor, ingresa tu PIN.');
+        return;
+      }
+      setLoading(true);
+      const result = await loginWithPhoneAndPin(cleanTelefono, pin.trim());
+      setLoading(false);
 
-    if (result.success && result.user) {
-      onLogin(result.user);
+      if (result.success && result.user) {
+        onLogin(result.user);
+      } else {
+        setError(result.error ?? 'Error al iniciar sesión. Verifica tu teléfono y PIN.');
+      }
     } else {
-      setError(result.error ?? 'Error al iniciar sesión. Verifica tu teléfono y PIN.');
+      // MODO CLIENTE
+      if (!isNewClient) {
+        // Verificar si existe el teléfono en la base de clientes local
+        const existingClient = clientAccounts?.find(c => c.phone === cleanTelefono);
+        
+        if (existingClient && onClientLogin) {
+          // Cliente existe, iniciar sesión directo
+          onClientLogin(existingClient);
+        } else {
+          // Cliente no existe, habilitar modo registro
+          setIsNewClient(true);
+        }
+      } else {
+        // Registro de nuevo cliente
+        if (!clientName.trim()) {
+          setError('Por favor, ingresa tu nombre completo para crear la cuenta.');
+          return;
+        }
+
+        setLoading(true);
+        try {
+          const newId = `CLIENT-${Date.now()}`;
+          const newClient: ClientAccount = {
+            id: newId,
+            name: clientName.trim(),
+            phone: cleanTelefono,
+            defaultStore: 'Sucursal 1 - Central' // Por defecto
+          };
+          
+          if (onAddClientAccount) {
+            await onAddClientAccount(newClient);
+          }
+          
+          if (onClientLogin) {
+            onClientLogin(newClient);
+          }
+        } catch (err: any) {
+          setError(err.message ?? 'Error al crear la cuenta de cliente.');
+        } finally {
+          setLoading(false);
+        }
+      }
     }
+  };
+
+  const resetForm = () => {
+    setError('');
+    setPin('');
+    setIsNewClient(false);
+    setClientName('');
   };
 
   return (
@@ -66,7 +131,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
         color: '#fff',
       }}>
         {/* Logo / marca */}
-        <div style={{ textAlign: 'center', marginBottom: 32 }}>
+        <div style={{ textAlign: 'center', marginBottom: 24 }}>
           <div style={{
             width: 64,
             height: 64,
@@ -84,8 +149,65 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
             Rinconcito Frutal
           </h1>
           <p style={{ margin: '4px 0 0', fontSize: 13, color: 'rgba(255,255,255,0.55)' }}>
-            Sistema de Punto de Venta
+            Bienvenido al Portal
           </p>
+        </div>
+
+        {/* Toggle Modo */}
+        <div style={{
+          display: 'flex',
+          background: 'rgba(255,255,255,0.08)',
+          borderRadius: 12,
+          padding: 4,
+          marginBottom: 24,
+          border: '1px solid rgba(255,255,255,0.1)'
+        }}>
+          <button
+            type="button"
+            onClick={() => { setLoginMode('colaborador'); resetForm(); }}
+            style={{
+              flex: 1,
+              padding: '10px 0',
+              borderRadius: 10,
+              border: 'none',
+              background: loginMode === 'colaborador' ? 'rgba(255,255,255,0.15)' : 'transparent',
+              color: loginMode === 'colaborador' ? '#fff' : 'rgba(255,255,255,0.5)',
+              fontWeight: loginMode === 'colaborador' ? 700 : 500,
+              fontSize: 13,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 6,
+              transition: 'all 0.2s'
+            }}
+          >
+            <Users size={16} />
+            Soy Colaborador
+          </button>
+          <button
+            type="button"
+            onClick={() => { setLoginMode('cliente'); resetForm(); }}
+            style={{
+              flex: 1,
+              padding: '10px 0',
+              borderRadius: 10,
+              border: 'none',
+              background: loginMode === 'cliente' ? 'rgba(255,255,255,0.15)' : 'transparent',
+              color: loginMode === 'cliente' ? '#fff' : 'rgba(255,255,255,0.5)',
+              fontWeight: loginMode === 'cliente' ? 700 : 500,
+              fontSize: 13,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 6,
+              transition: 'all 0.2s'
+            }}
+          >
+            <User size={16} />
+            Soy Cliente
+          </button>
         </div>
 
         {/* Formulario */}
@@ -103,6 +225,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                 value={telefono}
                 onChange={e => setTelefono(e.target.value)}
                 placeholder="5511223344"
+                disabled={isNewClient}
                 style={{
                   width: '100%',
                   boxSizing: 'border-box',
@@ -114,6 +237,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                   fontSize: 14,
                   outline: 'none',
                   transition: 'border-color 0.2s',
+                  opacity: isNewClient ? 0.6 : 1
                 }}
                 onFocus={e => (e.target.style.borderColor = 'rgba(249,115,22,0.7)')}
                 onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.15)')}
@@ -121,48 +245,82 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
             </div>
           </div>
 
-          <div style={{ marginBottom: 24 }}>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.7)', marginBottom: 6, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-              PIN / Contraseña corta
-            </label>
-            <div style={{ position: 'relative' }}>
-              <Lock size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.4)' }} />
-              <input
-                id="login-pin"
-                type={showPin ? 'text' : 'password'}
-                autoComplete="current-password"
-                value={pin}
-                onChange={e => setPin(e.target.value)}
-                placeholder="••••"
-                style={{
-                  width: '100%',
-                  boxSizing: 'border-box',
-                  padding: '11px 40px 11px 40px',
-                  background: 'rgba(255,255,255,0.08)',
-                  border: '1px solid rgba(255,255,255,0.15)',
-                  borderRadius: 10,
-                  color: '#fff',
-                  fontSize: 14,
-                  outline: 'none',
-                  transition: 'border-color 0.2s',
-                }}
-                onFocus={e => (e.target.style.borderColor = 'rgba(249,115,22,0.7)')}
-                onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.15)')}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPin(v => !v)}
-                style={{
-                  position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)',
-                  background: 'none', border: 'none', cursor: 'pointer',
-                  color: 'rgba(255,255,255,0.5)', padding: 0,
-                }}
-                aria-label={showPin ? 'Ocultar PIN' : 'Mostrar PIN'}
-              >
-                {showPin ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
+          {loginMode === 'colaborador' && (
+            <div style={{ marginBottom: 24 }}>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.7)', marginBottom: 6, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                PIN / Contraseña corta
+              </label>
+              <div style={{ position: 'relative' }}>
+                <Lock size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.4)' }} />
+                <input
+                  id="login-pin"
+                  type={showPin ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  value={pin}
+                  onChange={e => setPin(e.target.value)}
+                  placeholder="••••"
+                  style={{
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    padding: '11px 40px 11px 40px',
+                    background: 'rgba(255,255,255,0.08)',
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    borderRadius: 10,
+                    color: '#fff',
+                    fontSize: 14,
+                    outline: 'none',
+                    transition: 'border-color 0.2s',
+                  }}
+                  onFocus={e => (e.target.style.borderColor = 'rgba(249,115,22,0.7)')}
+                  onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.15)')}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPin(v => !v)}
+                  style={{
+                    position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)',
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    color: 'rgba(255,255,255,0.5)', padding: 0,
+                  }}
+                  aria-label={showPin ? 'Ocultar PIN' : 'Mostrar PIN'}
+                >
+                  {showPin ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
             </div>
-          </div>
+          )}
+
+          {loginMode === 'cliente' && isNewClient && (
+            <div style={{ marginBottom: 24 }}>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.7)', marginBottom: 6, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                Nombre Completo (Nuevo Registro)
+              </label>
+              <div style={{ position: 'relative' }}>
+                <User size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.4)' }} />
+                <input
+                  id="client-name"
+                  type="text"
+                  value={clientName}
+                  onChange={e => setClientName(e.target.value)}
+                  placeholder="Ej. Juan Pérez"
+                  style={{
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    padding: '11px 14px 11px 40px',
+                    background: 'rgba(255,255,255,0.08)',
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    borderRadius: 10,
+                    color: '#fff',
+                    fontSize: 14,
+                    outline: 'none',
+                    transition: 'border-color 0.2s',
+                  }}
+                  onFocus={e => (e.target.style.borderColor = 'rgba(249,115,22,0.7)')}
+                  onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.15)')}
+                />
+              </div>
+            </div>
+          )}
 
           {error && (
             <div style={{
@@ -194,6 +352,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
               gap: 8,
               boxShadow: loading ? 'none' : '0 4px 16px rgba(249,115,22,0.4)',
               transition: 'opacity 0.2s, transform 0.1s',
+              marginTop: loginMode === 'cliente' && !isNewClient ? 24 : 0
             }}
             onMouseDown={e => { if (!loading) (e.currentTarget.style.transform = 'scale(0.98)'); }}
             onMouseUp={e => { (e.currentTarget.style.transform = 'scale(1)'); }}
@@ -203,9 +362,12 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
             ) : (
               <LogIn size={16} />
             )}
-            {loading ? 'Iniciando sesión...' : 'Iniciar sesión'}
+            {
+              loading ? 'Procesando...' :
+              loginMode === 'colaborador' ? 'Iniciar Sesión' :
+              isNewClient ? 'Crear Cuenta y Entrar' : 'Entrar'
+            }
           </button>
-
 
         </form>
 

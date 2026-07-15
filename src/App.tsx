@@ -40,7 +40,7 @@ import { getLocalUsers, getUsers, saveLocalUsers, addOrUpdateUser as addOrUpdate
 import { getLocalCoupons, getCoupons, saveLocalCoupons } from './lib/database/coupons';
 import { getLocalStores, getStores, saveLocalStores, addOrUpdateStore } from './lib/database/sucursales';
 import { getLocalStoreClosed, getStoreClosed, setStoreClosed, getLocalLogoUrl, getLogoUrl, setLogoUrl as setDbLogoUrl, getLocalPolloStatus, getPolloStatus, setPolloStatus as setDbPolloStatus, getLocalMenuDelDia, getMenuDelDia, setMenuDelDia } from './lib/database/configuracion';
-import { getLocalClientAccounts, getClientAccounts, saveLocalClientAccounts, getLocalActiveClient, saveLocalActiveClient } from './lib/database/clientAccounts';
+import { getLocalClientAccounts, getClientAccounts, saveLocalClientAccounts, getLocalActiveClient, saveLocalActiveClient, addOrUpdateClientAccount } from './lib/database/clientAccounts';
 
 // Safe localStorage wrapper to prevent QuotaExceededError crashes
 try {
@@ -97,6 +97,18 @@ export default function App() {
   const handleLogout = useCallback(async () => {
     await supabaseLogout();
     setAuthUser(false);
+    setActiveClient(null);
+  }, []);
+
+  const handleClientLogin = useCallback((client: ClientAccount) => {
+    setActiveClient(client);
+    setAuthUser({
+      id: client.id,
+      nombre: client.name,
+      telefono: client.phone,
+      rol: 'Cliente',
+      activo: true
+    });
   }, []);
 
   // Derived role purely from auth user
@@ -1097,7 +1109,14 @@ export default function App() {
   }
 
   if (!authUser || !currentRole) {
-    return <LoginScreen onLogin={handleAuthLogin} />;
+    return (
+      <LoginScreen 
+        onLogin={handleAuthLogin}
+        clientAccounts={clientAccounts}
+        onClientLogin={handleClientLogin}
+        onAddClientAccount={addOrUpdateClientAccount}
+      />
+    );
   }
 
   return (

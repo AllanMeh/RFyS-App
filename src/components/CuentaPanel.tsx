@@ -240,11 +240,11 @@ export default function CuentaPanel({
               <p className="text-gray-400 dark:text-slate-500">@{lastRegisteredUser.username}</p>
             </div>
             <span className="bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 px-3 py-1 rounded-full text-[10px] font-bold">
-              🧑‍🍳 Empleado
+              🧑‍🍳 {lastRegisteredUser.role}
             </span>
           </div>
           <p className="text-[10px] text-gray-400 dark:text-slate-500 italic">
-            * Nota: Tu rol inicial es Empleado. Solo un Administrador puede cambiar tu rol en el panel "Admin".
+            * Nota: Tu rol inicial asignado es {lastRegisteredUser.role}. Solo un Administrador puede cambiar tu rol en el panel "Admin".
           </p>
           <button
             onClick={() => setRegisteredSuccess(false)}
