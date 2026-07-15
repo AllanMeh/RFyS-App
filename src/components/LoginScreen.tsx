@@ -3,20 +3,21 @@
  * Pantalla de inicio de sesión dual: Cliente y Colaborador.
  */
 
-import React, { useState } from 'react';
-import { LogIn, Lock, Phone, Eye, EyeOff, RefreshCw, User, Users } from 'lucide-react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { LogIn, Lock, Phone, Eye, EyeOff, RefreshCw, User, Users, Store, ChevronDown } from 'lucide-react';
 import { loginWithPhoneAndPin } from '../lib/authService';
 import type { AuthUser } from '../lib/authService';
-import type { ClientAccount } from '../types';
+import type { ClientAccount, StoreInfo } from '../types';
 
 interface LoginScreenProps {
   onLogin: (user: AuthUser) => void;
   clientAccounts?: ClientAccount[];
   onClientLogin?: (client: ClientAccount) => void;
   onAddClientAccount?: (client: ClientAccount) => Promise<void>;
+  stores?: StoreInfo[];
 }
 
-export default function LoginScreen({ onLogin, clientAccounts, onClientLogin, onAddClientAccount }: LoginScreenProps) {
+export default function LoginScreen({ onLogin, clientAccounts, onClientLogin, onAddClientAccount, stores }: LoginScreenProps) {
   const [loginMode, setLoginMode] = useState<'colaborador' | 'cliente'>('colaborador');
   
   // Login form states
@@ -29,6 +30,29 @@ export default function LoginScreen({ onLogin, clientAccounts, onClientLogin, on
   // Estados exclusivos para creación de cliente
   const [isNewClient, setIsNewClient] = useState(false);
   const [clientName, setClientName] = useState('');
+  const [selectedStoreId, setSelectedStoreId] = useState<string>('');
+  const [showStoreDropdown, setShowStoreDropdown] = useState(false);
+
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Cerrar dropdown al hacer click fuera
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowStoreDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Ordenar sucursales alfabéticamente
+  const sortedStores = useMemo(() => {
+    if (!stores) return [];
+    return [...stores].sort((a, b) => a.nombre.localeCompare(b.nombre));
+  }, [stores]);
+
+  const selectedStore = sortedStores.find(s => s.id === selectedStoreId);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,6 +97,10 @@ export default function LoginScreen({ onLogin, clientAccounts, onClientLogin, on
           setError('Por favor, ingresa tu nombre completo para crear la cuenta.');
           return;
         }
+        if (!selectedStoreId) {
+          setError('Por favor, selecciona tu sucursal predeterminada.');
+          return;
+        }
 
         setLoading(true);
         try {
@@ -81,7 +109,7 @@ export default function LoginScreen({ onLogin, clientAccounts, onClientLogin, on
             id: newId,
             name: clientName.trim(),
             phone: cleanTelefono,
-            defaultStore: 'Sucursal 1 - Central' // Por defecto
+            defaultStore: selectedStoreId // Guardamos el ID de la sucursal seleccionada
           };
           
           if (onAddClientAccount) {
@@ -105,6 +133,8 @@ export default function LoginScreen({ onLogin, clientAccounts, onClientLogin, on
     setPin('');
     setIsNewClient(false);
     setClientName('');
+    setSelectedStoreId('');
+    setShowStoreDropdown(false);
   };
 
   return (
@@ -291,35 +321,132 @@ export default function LoginScreen({ onLogin, clientAccounts, onClientLogin, on
           )}
 
           {loginMode === 'cliente' && isNewClient && (
-            <div style={{ marginBottom: 24 }}>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.7)', marginBottom: 6, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-                Nombre Completo (Nuevo Registro)
-              </label>
-              <div style={{ position: 'relative' }}>
-                <User size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.4)' }} />
-                <input
-                  id="client-name"
-                  type="text"
-                  value={clientName}
-                  onChange={e => setClientName(e.target.value)}
-                  placeholder="Ej. Juan Pérez"
+            <>
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.7)', marginBottom: 6, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                  Nombre Completo (Nuevo Registro)
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <User size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.4)' }} />
+                  <input
+                    id="client-name"
+                    type="text"
+                    value={clientName}
+                    onChange={e => setClientName(e.target.value)}
+                    placeholder="Ej. Juan Pérez"
+                    style={{
+                      width: '100%',
+                      boxSizing: 'border-box',
+                      padding: '11px 14px 11px 40px',
+                      background: 'rgba(255,255,255,0.08)',
+                      border: '1px solid rgba(255,255,255,0.15)',
+                      borderRadius: 10,
+                      color: '#fff',
+                      fontSize: 14,
+                      outline: 'none',
+                      transition: 'border-color 0.2s',
+                    }}
+                    onFocus={e => (e.target.style.borderColor = 'rgba(249,115,22,0.7)')}
+                    onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.15)')}
+                  />
+                </div>
+              </div>
+
+              {/* Selector Visual de Sucursal */}
+              <div style={{ marginBottom: 24, position: 'relative' }} ref={dropdownRef}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.7)', marginBottom: 6, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                  Sucursal Predeterminada
+                </label>
+                <div 
+                  onClick={() => setShowStoreDropdown(!showStoreDropdown)}
                   style={{
                     width: '100%',
                     boxSizing: 'border-box',
-                    padding: '11px 14px 11px 40px',
+                    padding: '11px 40px 11px 14px',
                     background: 'rgba(255,255,255,0.08)',
                     border: '1px solid rgba(255,255,255,0.15)',
                     borderRadius: 10,
-                    color: '#fff',
+                    color: selectedStore ? '#fff' : 'rgba(255,255,255,0.5)',
                     fontSize: 14,
-                    outline: 'none',
-                    transition: 'border-color 0.2s',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 12,
+                    borderColor: showStoreDropdown ? 'rgba(249,115,22,0.7)' : 'rgba(255,255,255,0.15)',
+                    transition: 'border-color 0.2s'
                   }}
-                  onFocus={e => (e.target.style.borderColor = 'rgba(249,115,22,0.7)')}
-                  onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.15)')}
-                />
+                >
+                  {selectedStore ? (
+                    <>
+                      {selectedStore.image ? (
+                        <img src={selectedStore.image} alt="Logo" style={{ width: 24, height: 24, borderRadius: 4, objectFit: 'cover' }} />
+                      ) : (
+                        <Store size={20} color="rgba(255,255,255,0.5)" />
+                      )}
+                      <span>{selectedStore.nombre}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Store size={20} color="rgba(255,255,255,0.4)" />
+                      <span>Seleccionar sucursal...</span>
+                    </>
+                  )}
+                  <ChevronDown size={16} style={{ position: 'absolute', right: 14, color: 'rgba(255,255,255,0.4)' }} />
+                </div>
+
+                {showStoreDropdown && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    right: 0,
+                    marginTop: 8,
+                    background: '#24243e',
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    borderRadius: 12,
+                    maxHeight: 220,
+                    overflowY: 'auto',
+                    zIndex: 50,
+                    boxShadow: '0 10px 40px rgba(0,0,0,0.6)'
+                  }}>
+                    {sortedStores.length > 0 ? (
+                      sortedStores.map(store => (
+                        <div
+                          key={store.id}
+                          onClick={() => {
+                            setSelectedStoreId(store.id);
+                            setShowStoreDropdown(false);
+                          }}
+                          style={{
+                            padding: '10px 14px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 12,
+                            cursor: 'pointer',
+                            borderBottom: '1px solid rgba(255,255,255,0.05)',
+                            background: selectedStoreId === store.id ? 'rgba(249,115,22,0.15)' : 'transparent',
+                            transition: 'background 0.2s'
+                          }}
+                          onMouseEnter={e => { if (selectedStoreId !== store.id) e.currentTarget.style.background = 'rgba(255,255,255,0.08)' }}
+                          onMouseLeave={e => { if (selectedStoreId !== store.id) e.currentTarget.style.background = 'transparent' }}
+                        >
+                          {store.image ? (
+                            <img src={store.image} alt="Logo" style={{ width: 24, height: 24, borderRadius: 4, objectFit: 'cover' }} />
+                          ) : (
+                            <Store size={20} color="rgba(255,255,255,0.5)" />
+                          )}
+                          <span style={{ fontSize: 13, color: '#fff' }}>{store.nombre}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <div style={{ padding: '12px', textAlign: 'center', color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>
+                        No hay sucursales disponibles.
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-            </div>
+            </>
           )}
 
           {error && (

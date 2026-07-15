@@ -102,13 +102,17 @@ export default function App() {
 
   const handleClientLogin = useCallback((client: ClientAccount) => {
     setActiveClient(client);
-    setAuthUser({
+    const authClient: AuthUser = {
       id: client.id,
       nombre: client.name,
       telefono: client.phone,
       rol: 'Cliente',
       activo: true
-    });
+    };
+    setAuthUser(authClient);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('rf_auth_user', JSON.stringify(authClient));
+    }
   }, []);
 
   // Derived role purely from auth user
@@ -1115,6 +1119,7 @@ export default function App() {
         clientAccounts={clientAccounts}
         onClientLogin={handleClientLogin}
         onAddClientAccount={addOrUpdateClientAccount}
+        stores={stores}
       />
     );
   }
