@@ -8,7 +8,7 @@ import { UserAccount, Role } from '../types';
 import { User, UserPlus, Sparkles, CheckCircle, Info, RefreshCw } from 'lucide-react';
 import AvatarUploader from './AvatarUploader';
 import { supabase } from '../lib/supabase';
-import { hashPin } from '../lib/authService';
+import { hashPin, type AuthUser } from '../lib/authService';
 
 const compressImage = (base64Str: string, callback: (compressed: string) => void) => {
   const img = new Image();
@@ -53,6 +53,7 @@ interface CuentaPanelProps {
   currentRole: Role;
   onUpdateUserAvatar?: (userId: string, avatarUrl: string) => void;
   onUpdateUser?: (updatedUser: UserAccount) => void;
+  authUser?: AuthUser | null | false;
 }
 
 export default function CuentaPanel({
@@ -60,7 +61,8 @@ export default function CuentaPanel({
   onAddUser,
   currentRole,
   onUpdateUserAvatar,
-  onUpdateUser
+  onUpdateUser,
+  authUser
 }: CuentaPanelProps) {
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
@@ -71,7 +73,12 @@ export default function CuentaPanel({
   const [registeredSuccess, setRegisteredSuccess] = useState(false);
   const [lastRegisteredUser, setLastRegisteredUser] = useState<UserAccount | null>(null);
 
-  const activeUser = users.find(u => u.role === currentRole);
+  const activeUser = users.find(u => {
+    if (authUser && authUser !== false) {
+      return u.id === authUser.id || u.phone === authUser.telefono;
+    }
+    return false;
+  });
 
   // States for editing active user info
   const [editingId, setEditingId] = useState('');

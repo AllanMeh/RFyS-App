@@ -1236,9 +1236,10 @@ export default function App() {
                 <CuentaPanel
                   users={users}
                   onAddUser={handleAddUser}
-                  currentRole={currentRole}
+                  currentRole={currentRole as Role}
                   onUpdateUserAvatar={handleUpdateUserAvatar}
                   onUpdateUser={handleUpdateUser}
+                  authUser={authUser}
                 />
                 
                 {supabase && authUser && (
