@@ -49,7 +49,6 @@ interface CuentaPanelProps {
   users: UserAccount[];
   onAddUser: (newUser: UserAccount) => void;
   currentRole: Role;
-  setCurrentRole: (role: Role) => void;
   onUpdateUserAvatar?: (userId: string, avatarUrl: string) => void;
   onUpdateUser?: (updatedUser: UserAccount) => void;
 }
@@ -58,7 +57,6 @@ export default function CuentaPanel({
   users,
   onAddUser,
   currentRole,
-  setCurrentRole,
   onUpdateUserAvatar,
   onUpdateUser
 }: CuentaPanelProps) {
@@ -163,8 +161,6 @@ export default function CuentaPanel({
     setLastRegisteredUser(newUser);
     setRegisteredSuccess(true);
     
-    // Automatically set active app role to Empleado for testing
-    setCurrentRole('Empleado');
 
     // Reset fields
     setName('');

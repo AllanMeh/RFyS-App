@@ -36,7 +36,7 @@ import { getLocalProducts, getProducts, saveLocalProducts, addProduct, editProdu
 import { getLocalOrders, getOrders, saveLocalOrders, addOrder as addOrderDb, editOrder as editOrderDb, removeOrder as removeOrderDb } from './lib/database/orders';
 import { getLocalClients, getClients, saveLocalClients, addClient as addClientDb, editClient as editClientDb, removeClient as removeClientDb } from './lib/database/clients';
 import { getLocalCaja, getCajaStatus, updateCajaStatus, getLocalExtraMovements, getExtraMovements, saveLocalExtraMovements, removeExtraMovement } from './lib/database/caja';
-import { getLocalUsers, getUsers, saveLocalUsers, getLocalRole, saveLocalRole, addOrUpdateUser as addOrUpdateUserDb, removeUser as removeUserDb } from './lib/database/users';
+import { getLocalUsers, getUsers, saveLocalUsers, addOrUpdateUser as addOrUpdateUserDb, removeUser as removeUserDb } from './lib/database/users';
 import { getLocalCoupons, getCoupons, saveLocalCoupons } from './lib/database/coupons';
 import { getLocalStores, getStores, saveLocalStores, addOrUpdateStore } from './lib/database/sucursales';
 import { getLocalStoreClosed, getStoreClosed, setStoreClosed, getLocalLogoUrl, getLogoUrl, setLogoUrl as setDbLogoUrl, getLocalPolloStatus, getPolloStatus, setPolloStatus as setDbPolloStatus, getLocalMenuDelDia, getMenuDelDia, setMenuDelDia } from './lib/database/configuracion';
@@ -64,15 +64,10 @@ export default function App() {
   // null  = loading (checking session)
   // false = no session (show LoginScreen)
   // AuthUser = logged in
-  const [authUser, setAuthUser] = useState<AuthUser | null | false>(
-    supabase ? null : false  // If no Supabase config, skip auth check
-  );
-  const [guestMode, setGuestMode] = useState<boolean>(!supabase);
-
+  const [authUser, setAuthUser] = useState<AuthUser | null | false>(null);
   // Subscribe to Supabase auth changes on mount
   useEffect(() => {
     if (!supabase) {
-      setGuestMode(true);
       setAuthUser(false);
       return;
     }
@@ -82,19 +77,13 @@ export default function App() {
       if (!session) {
         setAuthUser(false); // no session → show login
       }
-      // If session exists, subscribeToAuthChanges will fire with the user
     });
 
     const unsubscribe = subscribeToAuthChanges(user => {
       if (user) {
         setAuthUser(user);
-        setGuestMode(false);
-        // Sync role from Supabase profile
-        setCurrentRole(user.rol as Role);
-        saveLocalRole(user.rol as Role);
       } else {
-        setAuthUser(null);
-        setGuestMode(true);
+        setAuthUser(false);
       }
     });
 
@@ -103,26 +92,15 @@ export default function App() {
 
   const handleAuthLogin = useCallback((user: AuthUser) => {
     setAuthUser(user);
-    setGuestMode(false);
-    setCurrentRole(user.rol as Role);
-    saveLocalRole(user.rol as Role);
-  }, []);
-
-  const handleGuestLogin = useCallback(() => {
-    setGuestMode(true);
-    setAuthUser(false);
   }, []);
 
   const handleLogout = useCallback(async () => {
     await supabaseLogout();
     setAuthUser(false);
-    setGuestMode(false);
   }, []);
 
-  // Load initial data states from local storage falling back to data module
-  const [currentRole, setCurrentRole] = useState<Role>(() => {
-    return getLocalRole();
-  });
+  // Derived role purely from auth user
+  const currentRole = authUser ? (authUser.rol as Role) : null;
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('POS');
 
@@ -153,8 +131,7 @@ export default function App() {
   });
 
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
-    const savedRole = getLocalRole();
-    return resolveTheme(loadThemeMode(savedRole)) === 'dark';
+    return resolveTheme(loadThemeMode('Administrador')) === 'dark';
   });
 
   const [clientAccounts, setClientAccounts] = useState<ClientAccount[]>(() => {
@@ -205,16 +182,18 @@ export default function App() {
 
 
   useEffect(() => {
-    // When the role changes, reload that role's persisted theme preference
-    const resolved = resolveTheme(loadThemeMode(currentRole));
-    setIsDarkMode(resolved === 'dark');
+    if (currentRole) {
+      const resolved = resolveTheme(loadThemeMode(currentRole));
+      setIsDarkMode(resolved === 'dark');
+    }
   }, [currentRole]);
 
   useEffect(() => {
-    // Apply theme to DOM and persist preference via centralised helpers
-    const resolved: 'light' | 'dark' = isDarkMode ? 'dark' : 'light';
-    applyThemeToDom(resolved);
-    saveThemeMode(currentRole, resolved);
+    if (currentRole) {
+      const resolved: 'light' | 'dark' = isDarkMode ? 'dark' : 'light';
+      applyThemeToDom(resolved);
+      saveThemeMode(currentRole, resolved);
+    }
   }, [isDarkMode, currentRole]);
 
   const toggleDarkMode = () => setIsDarkMode(prev => !prev);
@@ -280,10 +259,6 @@ export default function App() {
     setDbPolloStatus(polloStatus);
   }, [polloStatus]);
 
-  // Sync state changes to clean localStorage
-  useEffect(() => {
-    saveLocalRole(currentRole);
-  }, [currentRole]);
 
   useEffect(() => {
     setStoreClosed(isStoreClosed);
@@ -458,7 +433,6 @@ export default function App() {
         { id: 'usr-3', name: 'Sofía Castro', phone: '5522334455', username: 'sofia', role: 'Repartidor', registeredAt: new Date('2026-06-19T12:00:00Z').toISOString() },
       ]);
       setActiveTab('Dashboard');
-      setCurrentRole('Administrador');
       alert('¡Datos restablecidos con éxito!');
     }
   };
@@ -1122,12 +1096,15 @@ export default function App() {
     );
   }
 
+  if (!authUser || !currentRole) {
+    return <LoginScreen onLogin={handleAuthLogin} />;
+  }
+
   return (
     <div className="min-h-screen bg-orange-50 dark:bg-slate-900 flex flex-col pb-24 transition-colors">
       {/* Top operational bar */}
       <Header
         currentRole={currentRole}
-        setCurrentRole={setCurrentRole}
         onRefreshAll={handleHardReset}
         activeTab={activeTab}
         users={users}
@@ -1222,31 +1199,7 @@ export default function App() {
             )}
 
             {activeTab === 'Administración' && (
-              supabase && !authUser && !guestMode ? (
-                <LoginScreen
-                  onLogin={handleAuthLogin}
-                  onGuestLogin={handleGuestLogin}
-                />
-              ) : (
                 <div className="space-y-4">
-                  {supabase && !authUser && guestMode && (
-                    <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs text-amber-905 dark:text-amber-300 font-sans shadow-sm">
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg">⚠️</span>
-                        <div>
-                          <p className="font-bold">Modo Local / Invitado Activo</p>
-                          <p className="text-amber-700 dark:text-amber-400">Los cambios que realices no se sincronizarán con Supabase.</p>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => setGuestMode(false)}
-                        className="bg-amber-600 hover:bg-amber-700 text-white font-bold px-3 py-1.5 rounded-lg text-[11px] whitespace-nowrap cursor-pointer transition-colors"
-                      >
-                        Iniciar Sesión Supabase 🔐
-                      </button>
-                    </div>
-                  )}
-                  
                   <AdminPanel
                     products={products}
                     orders={orders}
@@ -1276,7 +1229,6 @@ export default function App() {
                     clientAccounts={clientAccounts}
                   />
                 </div>
-              )
             )}
 
             {activeTab === 'Cuenta' && (
@@ -1285,7 +1237,6 @@ export default function App() {
                   users={users}
                   onAddUser={handleAddUser}
                   currentRole={currentRole}
-                  setCurrentRole={setCurrentRole}
                   onUpdateUserAvatar={handleUpdateUserAvatar}
                   onUpdateUser={handleUpdateUser}
                 />
@@ -1324,24 +1275,6 @@ export default function App() {
               <p className="text-sm text-gray-500 leading-relaxed font-sans">
                 El módulo de <strong className="text-gray-900">"{activeTab}"</strong> requiere permisos especiales. Tu rol actual es <strong className="text-gray-900">"{currentRole}"</strong>.
               </p>
-            </div>
-
-            <div className="bg-amber-50 rounded-xl p-4 border border-amber-200 text-xs text-amber-950 font-sans leading-relaxed text-left flex gap-3 items-center">
-              <KeyRound className="w-5 h-5 text-amber-600 flex-shrink-0" />
-              <p>
-                <strong>¿Estás evaluando la aplicación?</strong> Puedes cambiar de rol (Administrador, Empleado o Repartidor) fácilmente usando el selector en el menú superior naranja en cualquier momento.
-              </p>
-            </div>
-
-            <div className="pt-2">
-              <button
-                value="Administrador"
-                onClick={() => setCurrentRole('Administrador')}
-                className="bg-[#904d00] hover:bg-amber-900 text-white text-xs font-bold px-6 py-3 rounded-xl shadow-md cursor-pointer flex items-center justify-center gap-1.5 mx-auto"
-              >
-                <UserCheck className="w-4 h-4" />
-                <span>Asumir Rol Administrador 👑</span>
-              </button>
             </div>
           </div>
         )}

@@ -11,11 +11,9 @@ import type { AuthUser } from '../lib/authService';
 
 interface LoginScreenProps {
   onLogin: (user: AuthUser) => void;
-  /** Fallback: si Supabase falla, el usuario puede ingresar como invitado */
-  onGuestLogin?: () => void;
 }
 
-export default function LoginScreen({ onLogin, onGuestLogin }: LoginScreenProps) {
+export default function LoginScreen({ onLogin }: LoginScreenProps) {
   // Login form states
   const [telefono, setTelefono] = useState('');
   const [pin, setPin] = useState('');
@@ -208,30 +206,7 @@ export default function LoginScreen({ onLogin, onGuestLogin }: LoginScreenProps)
             {loading ? 'Iniciando sesión...' : 'Iniciar sesión'}
           </button>
 
-          {onGuestLogin && (
-            <button
-              id="btn-guest-login"
-              type="button"
-              onClick={onGuestLogin}
-              style={{
-                width: '100%',
-                marginTop: 12,
-                padding: '11px',
-                background: 'rgba(255,255,255,0.06)',
-                border: '1px solid rgba(255,255,255,0.15)',
-                borderRadius: 12,
-                color: 'rgba(255,255,255,0.6)',
-                fontWeight: 500,
-                fontSize: 13,
-                cursor: 'pointer',
-                transition: 'background 0.2s',
-              }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.1)')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
-            >
-              Entrar sin cuenta (modo local)
-            </button>
-          )}
+
         </form>
 
         <p style={{ marginTop: 28, textAlign: 'center', fontSize: 11, color: 'rgba(255,255,255,0.25)' }}>

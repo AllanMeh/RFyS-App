@@ -13,7 +13,7 @@ import type { SupabaseConnectionState } from '../lib/useSupabaseStatus';
 
 interface HeaderProps {
   currentRole: Role;
-  setCurrentRole: (role: Role) => void;
+
   onRefreshAll: () => void;
   activeTab: ActiveTab;
   users?: UserAccount[];
@@ -25,7 +25,7 @@ interface HeaderProps {
   supabaseStatus?: SupabaseConnectionState;
 }
 
-export default function Header({ currentRole, setCurrentRole, onRefreshAll, activeTab, users, isStoreClosed = false, logoUrl, onNavigateToProfile, isDarkMode, toggleDarkMode, supabaseStatus }: HeaderProps) {
+export default function Header({ currentRole, onRefreshAll, activeTab, users, isStoreClosed = false, logoUrl, onNavigateToProfile, isDarkMode, toggleDarkMode, supabaseStatus }: HeaderProps) {
   const isDashboard = activeTab === 'Dashboard';
 
   const userWithRole = users?.find(u => u.role === currentRole);
@@ -90,21 +90,6 @@ export default function Header({ currentRole, setCurrentRole, onRefreshAll, acti
               <span className="hidden md:inline">ACTUALIZAR</span>
             </button>
 
-            {/* Role selector dropdown */}
-            <div className="flex items-center gap-1.5 bg-orange-200 px-2 py-1 rounded-lg border border-orange-300">
-              <Shield className="w-3.5 h-3.5 text-orange-800" />
-              <select
-                value={currentRole}
-                onChange={(e) => setCurrentRole(e.target.value as Role)}
-                className="bg-transparent text-orange-950 font-sans text-xs font-black focus:outline-none cursor-pointer border-none p-0 pr-1 hover:text-orange-900"
-              >
-                <option value="Administrador" className="text-gray-900 font-sans">Admin 👑</option>
-                <option value="Líder" className="text-gray-900 font-sans">Líder 🎖️</option>
-                <option value="Empleado" className="text-gray-900 font-sans">Empleado 🧑‍🍳</option>
-                <option value="Repartidor" className="text-gray-900 font-sans">Repartidor 🚚</option>
-                <option value="Cliente" className="text-gray-900 font-sans">Cliente 👤</option>
-              </select>
-            </div>
 
             {/* Dark Mode Toggle */}
             {toggleDarkMode && (
@@ -180,22 +165,6 @@ export default function Header({ currentRole, setCurrentRole, onRefreshAll, acti
             <span className="hidden xs:inline">ACTUALIZAR TODO</span>
           </button>
 
-          {/* Role selector dropdown */}
-          <div className="flex items-center gap-2 bg-orange-200 px-3 py-1.5 rounded-xl border border-orange-300">
-            <Shield className="w-4 h-4 text-orange-800" />
-            <label className="text-[11px] uppercase font-mono tracking-wider text-orange-800 font-black hidden md:inline">ROL:</label>
-            <select
-              value={currentRole}
-              onChange={(e) => setCurrentRole(e.target.value as Role)}
-              className="bg-transparent text-orange-950 font-sans text-sm font-black focus:outline-none cursor-pointer border-none p-0 pr-1 hover:text-orange-900"
-            >
-              <option value="Administrador" className="text-gray-900 font-sans">Administrador 👑</option>
-              <option value="Líder" className="text-gray-900 font-sans">Líder 🎖️</option>
-              <option value="Empleado" className="text-gray-900 font-sans">Empleado 🧑‍🍳</option>
-              <option value="Repartidor" className="text-gray-900 font-sans">Repartidor 🚚</option>
-              <option value="Cliente" className="text-gray-900 font-sans">Cliente 👤</option>
-            </select>
-          </div>
 
           {/* Dark Mode Toggle */}
           {toggleDarkMode && (

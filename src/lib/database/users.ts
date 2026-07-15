@@ -9,7 +9,6 @@ import { fetchUsuarios, upsertUsuario } from '../usuariosService';
 import type { UserAccount, Role } from '../../types';
 
 const STORAGE_KEY = 'rf_users';
-const ROLE_KEY = 'rf_role';
 
 const INITIAL_USERS: UserAccount[] = [
   { id: 'usr-1', name: 'Administrador Principal', phone: '5511223344', username: 'admin', role: 'Administrador', registeredAt: new Date('2026-06-19T12:00:00Z').toISOString() },
@@ -81,25 +80,6 @@ export async function addOrUpdateUser(user: UserAccount): Promise<void> {
     'actualizarUsuario'
   );
 }
-
-/**
- * Obtiene el rol activo localmente de forma síncrona.
- */
-export function getLocalRole(): Role {
-  if (typeof window === 'undefined') return 'Administrador';
-  const saved = localStorage.getItem(ROLE_KEY);
-  return (saved as Role) || 'Administrador';
-}
-
-/**
- * Guarda el rol activo.
- */
-export function saveLocalRole(role: Role): void {
-  if (typeof window !== 'undefined') {
-    localStorage.setItem(ROLE_KEY, role);
-  }
-}
-
 /**
  * Elimina un usuario.
  */
