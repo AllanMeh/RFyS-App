@@ -57,19 +57,15 @@ export async function getOrders(): Promise<Order[]> {
  * Agrega un nuevo pedido.
  */
 export async function addOrder(order: Order): Promise<void> {
+  // We await upsertPedido directly so errors bubble up.
+  // If it succeeds, we save to local cache.
+  await upsertPedido(order);
+
   const local = getLocalOrders();
   if (!local.some(o => o.id === order.id)) {
     local.push(order);
     saveLocalOrders(local);
   }
-
-  await runHybrid(
-    async () => {
-      await upsertPedido(order);
-    },
-    () => {},
-    'insertarPedido'
-  );
 }
 
 /**

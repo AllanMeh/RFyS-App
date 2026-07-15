@@ -68,7 +68,8 @@ export async function upsertPedido(pedido: Order): Promise<void> {
     .from('pedidos')
     .upsert(toRow(pedido), { onConflict: 'id' });
   if (error) {
-    console.warn('[Sync:Pedidos] ❌ upsertPedido error:', error.message);
+    console.error('[Sync:Pedidos] ❌ upsertPedido error:', error.message);
+    throw new Error(error.message);
   } else {
     console.info(`[Sync:Pedidos] ⬆️ Pedido ${pedido.id} sincronizado.`);
   }

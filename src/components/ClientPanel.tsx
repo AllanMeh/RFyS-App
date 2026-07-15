@@ -924,7 +924,7 @@ export default function ClientPanel({
 
   const cartTotal = Math.max(0, Math.ceil((cartSubtotal - couponDiscount) / 5) * 5);
 
-  const handleCheckoutSubmit = () => {
+  const handleCheckoutSubmit = async () => {
     if (clientCart.length === 0) return;
     if (!activeClient) return;
 
@@ -939,24 +939,28 @@ export default function ClientPanel({
       status: 'Pendiente',
       paymentStatus: isCredit ? 'Crédito' : 'Pendiente',
       clientName: activeClient.name,
-      clientId: activeClient.phone,
+      clientId: activeClient.id, // Corrección: Usar ID real ('CRED-...') que existe en la tabla clientes
       timestamp: new Date().toISOString(),
       notes: `Tienda: ${activeClient.defaultStore} | Canales: Portal Cliente`
     };
 
-    onAddOrder(newOrder);
+    try {
+      await onAddOrder(newOrder);
 
-    // If coupon was applied, mark it as used
-    if (appliedCoupon) {
-      setCoupons(prev => prev.map(c => c.id === appliedCoupon.id ? { ...c, used: true } : c));
+      // If coupon was applied, mark it as used
+      if (appliedCoupon) {
+        setCoupons(prev => prev.map(c => c.id === appliedCoupon.id ? { ...c, used: true } : c));
+      }
+
+      setClientCart([]);
+      setAppliedCoupon(null);
+      setSelectedCouponCode('');
+      setPaymentMethod(clientCreditProfile && !['Cerrada', 'Archivada', 'Eliminada'].includes(clientCreditProfile.status) ? 'Crédito' : 'Pendiente');
+      setActiveClientTab('pedidos');
+      alert(`¡Pedido ${newOrder.id} enviado exitosamente! Puedes revisar el estado en tiempo real.`);
+    } catch (err: any) {
+      alert(`Hubo un error al enviar tu pedido: ${err.message || 'La base de datos rechazó la operación.'}`);
     }
-
-    setClientCart([]);
-    setAppliedCoupon(null);
-    setSelectedCouponCode('');
-    setPaymentMethod(clientCreditProfile && !['Cerrada', 'Archivada', 'Eliminada'].includes(clientCreditProfile.status) ? 'Crédito' : 'Pendiente');
-    setActiveClientTab('pedidos');
-    alert(`¡Pedido ${newOrder.id} enviado exitosamente! Puedes revisar el estado en tiempo real.`);
   };
 
   // Client Orders list (including direct client orders, POS credit orders, and matching name orders)

@@ -415,6 +415,62 @@ export default function App() {
       .catch(err => console.warn('[OfflineQueue] Error al procesar la cola inicial:', err));
   }, []);
 
+  // ── Fase 6: Supabase Realtime para la tabla pedidos ────────────────────────
+  useEffect(() => {
+    if (!supabase) return;
+
+    const channel = supabase
+      .channel('public:pedidos')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'pedidos' },
+        (payload) => {
+          setOrders((prevOrders) => {
+            const { eventType, new: newRecord, old: oldRecord } = payload;
+
+            if (eventType === 'INSERT' || eventType === 'UPDATE') {
+              const mappedOrder: Order = {
+                id: newRecord.id,
+                items: newRecord.items || [],
+                subtotal: Number(newRecord.subtotal),
+                discount: Number(newRecord.discount),
+                total: Number(newRecord.total),
+                status: newRecord.status,
+                paymentStatus: newRecord.payment_status,
+                paymentMethod: newRecord.payment_method || undefined,
+                mixedPayment: newRecord.mixed_payment || undefined,
+                clientName: newRecord.client_name || undefined,
+                clientId: newRecord.client_id || undefined,
+                timestamp: newRecord.timestamp,
+                notes: newRecord.notes || undefined,
+              };
+
+              const existsIndex = prevOrders.findIndex((o) => o.id === mappedOrder.id);
+              if (existsIndex >= 0) {
+                const newArray = [...prevOrders];
+                newArray[existsIndex] = mappedOrder;
+                return newArray;
+              } else {
+                return [mappedOrder, ...prevOrders];
+              }
+            } else if (eventType === 'DELETE') {
+              return prevOrders.filter((o) => o.id !== oldRecord.id);
+            }
+            return prevOrders;
+          });
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.info('[Supabase Realtime] Suscrito a tabla pedidos.');
+        }
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   // Handle Automatic Redirections when roles change
   useEffect(() => {
     if (currentRole === 'Empleado' && !['POS', 'Cocina', 'Caja', 'Cuenta'].includes(activeTab)) {
@@ -454,29 +510,34 @@ export default function App() {
   };
 
   // State transaction actions
-  const addOrder = (newOrder: Order) => {
-    setOrders(prev => [newOrder, ...prev]);
-    addOrderDb(newOrder).catch(err => {
+  const addOrder = async (newOrder: Order) => {
+    try {
+      await addOrderDb(newOrder);
+
+      // Only update local UI state if the DB insert succeeded
+      setOrders(prev => [newOrder, ...prev]);
+
+      // If order has already paid during POS checkout (contado)
+      if (newOrder.paymentStatus === 'Pagado') {
+        setCajaState(prev => ({
+          ...prev,
+          ventasDelDia: prev.ventasDelDia + newOrder.total,
+          pedidosPagados: prev.pedidosPagados + 1
+        }));
+      }
+
+      // If checkout was registered directly as Credito (fiado)
+      if (newOrder.paymentStatus === 'Crédito' && newOrder.clientId) {
+        updateClientBalanceDirect(
+          newOrder.clientId,
+          newOrder.total,
+          `Consumo en POS: Pedido ${newOrder.id}`,
+          'Pedido'
+        );
+      }
+    } catch (err: any) {
       console.error('[Supabase Sync] Error al insertar pedido en Supabase:', err);
-    });
-
-    // If order has already paid during POS checkout (contado)
-    if (newOrder.paymentStatus === 'Pagado') {
-      setCajaState(prev => ({
-        ...prev,
-        ventasDelDia: prev.ventasDelDia + newOrder.total,
-        pedidosPagados: prev.pedidosPagados + 1
-      }));
-    }
-
-    // If checkout was registered directly as Credito (fiado)
-    if (newOrder.paymentStatus === 'Crédito' && newOrder.clientId) {
-      updateClientBalanceDirect(
-        newOrder.clientId,
-        newOrder.total,
-        `Consumo en POS: Pedido ${newOrder.id}`,
-        'Pedido'
-      );
+      throw err; // Re-throw to caller (ClientPanel or POS)
     }
   };
 
