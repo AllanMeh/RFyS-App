@@ -1086,7 +1086,7 @@ export default function App() {
   // Initial auth guard blocker removed to allow direct POS access.
   // Supabase auth checking operates silently in the background.
 
-  if (currentRole === 'Cliente') {
+  if (currentRole === 'Cliente' && activeClient) {
     return (
       <ClientPanel
         products={products}
@@ -1105,14 +1105,18 @@ export default function App() {
         setActiveClient={setActiveClient}
         isDarkMode={isDarkMode}
         toggleDarkMode={toggleDarkMode}
-        onExit={() => setCurrentRole('Administrador')}
+        onExit={() => {
+          setAuthUser(false);
+          setActiveClient(null);
+          localStorage.removeItem('rf_auth_user');
+        }}
         stores={stores}
         polloStatus={polloStatus}
       />
     );
   }
 
-  if (!authUser || !currentRole) {
+  if (!authUser || !currentRole || (currentRole === 'Cliente' && !activeClient)) {
     return (
       <LoginScreen 
         onLogin={handleAuthLogin}
