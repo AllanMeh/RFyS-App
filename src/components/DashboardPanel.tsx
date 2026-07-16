@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Order, ClientDebt, Product, ActiveTab } from '../types';
+import { formatStoreName } from '../lib/database/sucursales';
 import { 
   DollarSign, 
   ShoppingBag, 
@@ -107,7 +108,7 @@ export default function DashboardPanel({
           if (storeVal.toLowerCase().includes('mesa') || storeVal.toLowerCase().includes('local') || storeVal.toLowerCase().includes('gente')) {
             return 'Mesa';
           }
-          return storeVal;
+          return formatStoreName(storeVal);
         }
       }
     }
@@ -115,7 +116,7 @@ export default function DashboardPanel({
     if (order.clientId) {
       const client = clients.find(c => c.id === order.clientId);
       if (client && client.branch && !client.branch.includes('Central') && !client.branch.includes('Harbor') && !client.branch.includes('Station')) {
-        return client.branch;
+        return formatStoreName(client.branch);
       }
     }
     if (order.clientName) {
@@ -127,7 +128,7 @@ export default function DashboardPanel({
       if (match && match[1]) {
         const val = match[1].trim();
         if (!val.includes('Central') && !val.includes('Harbor') && !val.includes('Station')) {
-          return val;
+          return formatStoreName(val);
         }
       }
     }

@@ -121,7 +121,10 @@ export default function AvatarUploader({
       onAvatarChange?.(url);
     } catch (err: any) {
       console.error('Error uploading avatar:', err);
-      alert('Error subiendo imagen: ' + err.message);
+      const detailedError = err && typeof err === 'object'
+        ? `${err.message || ''} (Status: ${err.status || err.statusCode || 'N/A'}, Error: ${err.error || JSON.stringify(err)})`
+        : String(err);
+      alert('Error subiendo imagen: ' + detailedError);
     } finally {
       setIsUploading(false);
     }

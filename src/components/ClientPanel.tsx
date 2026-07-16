@@ -8,6 +8,7 @@ import {
 import StoreSelectorModal from './StoreSelectorModal';
 import { requestNotificationPermission } from '../services/notifications';
 import AvatarUploader from './AvatarUploader';
+import { formatStoreName } from '../lib/database/sucursales';
 
 
 interface ClientPanelProps {
@@ -1122,7 +1123,7 @@ export default function ClientPanel({
                   >
                     <span className="flex items-center gap-1.5 min-w-0">
                       <Store className="w-4 h-4 text-gray-400 shrink-0" />
-                      <span className="truncate">{regStore}</span>
+                      <span className="truncate">{formatStoreName(regStore) || 'Seleccionar sucursal...'}</span>
                     </span>
                     <span className="text-[10px] text-orange-600 font-black shrink-0 ml-1">Cambiar</span>
                   </button>
@@ -1409,7 +1410,7 @@ export default function ClientPanel({
         <div className="bg-gradient-to-r from-orange-500 to-amber-700 rounded-3xl p-5 text-white shadow-lg relative overflow-hidden flex items-center justify-between">
           <div className="space-y-1 relative z-10">
             <h1 className="text-xl sm:text-2xl font-black">¡Hola, {activeClient.name}!</h1>
-            <p className="text-xs text-orange-50 font-medium">¿Qué se te antoja saborear hoy en tu sucursal {activeClient.defaultStore}?</p>
+            <p className="text-xs text-orange-50 font-medium">¿Qué se te antoja saborear hoy en tu sucursal {formatStoreName(activeClient.defaultStore)}?</p>
           </div>
           <div className="relative z-10 shrink-0">
             <AvatarUploader
@@ -1803,7 +1804,7 @@ export default function ClientPanel({
                 </div>
                 <div>
                   <span className="text-gray-400 font-bold block">Sucursal Predeterminada:</span>
-                  <span className="font-bold text-[#904d00] dark:text-amber-500">{activeClient.defaultStore}</span>
+                  <span className="font-bold text-[#904d00] dark:text-amber-500">{formatStoreName(activeClient.defaultStore)}</span>
                 </div>
 
                 {/* Preferencias de Notificaciones */}

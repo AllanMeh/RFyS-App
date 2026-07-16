@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { StoreInfo } from '../types';
 import { Search, X, Check, MapPin } from 'lucide-react';
+import { formatStoreName } from '../lib/database/sucursales';
 
 interface StoreSelectorModalProps {
   isOpen: boolean;
@@ -33,7 +34,7 @@ export default function StoreSelectorModal({
 
   // Helper to generate initials from store name
   const getInitials = (name: string) => {
-    const cleanName = name.replace(/\(.*\)/, '').trim(); // Remove parentheses details
+    const cleanName = formatStoreName(name).replace(/\(.*\)/, '').trim(); // Remove parentheses details
     const words = cleanName.split(/\s+/);
     if (words.length >= 2) {
       return (words[0][0] + words[1][0]).toUpperCase();
@@ -158,7 +159,7 @@ export default function StoreSelectorModal({
                     {/* Info */}
                     <div className="flex-1 min-w-0 pr-2">
                       <h4 className="font-bold text-white text-xs line-clamp-1">
-                        {st.name}
+                        {formatStoreName(st.name)}
                       </h4>
                       <span className="text-[9px] font-mono text-white/50 uppercase tracking-wider block mt-0.5">
                         {st.name.toLowerCase().includes('mesa') ? 'Consumo Local' : 'Tienda / Sucursal'}

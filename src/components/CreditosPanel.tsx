@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { ClientDebt, Movement, StoreInfo } from '../types';
+import { formatStoreName } from '../lib/database/sucursales';
 import { getLocalUsers } from '../lib/database/users';
 import { 
   Search, 
@@ -532,7 +533,7 @@ export default function CreditosPanel({
                 >
                   <option value="All">🏪 Todas las Tiendas</option>
                   {stores.map((st) => (
-                    <option key={st.id} value={st.name}>{st.name}</option>
+                    <option key={st.id} value={st.name}>{formatStoreName(st.name)}</option>
                   ))}
                 </select>
               </div>
@@ -603,7 +604,7 @@ export default function CreditosPanel({
                             {/* 2. TIENDA */}
                             <span className="flex items-center gap-1">
                               <Store className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                              <span>Tienda: <strong>{client.branch}</strong></span>
+                              <span>Tienda: <strong>{formatStoreName(client.branch)}</strong></span>
                             </span>
                             
                             {/* 4. FECHA */}
@@ -757,7 +758,7 @@ export default function CreditosPanel({
                     {selectedClient.name}
                   </h3>
                   <div className="flex flex-col sm:flex-row sm:items-center gap-x-4 gap-y-1 text-xs text-gray-500 mt-1.5 font-mono">
-                    <span>🏪 Sucursal: <strong>{selectedClient.branch}</strong></span>
+                    <span>🏪 Sucursal: <strong>{formatStoreName(selectedClient.branch)}</strong></span>
                     <span className="hidden sm:inline">•</span>
                     <span>📞 Tel: <strong>{selectedClient.phone}</strong></span>
                     <span className="hidden sm:inline">•</span>
@@ -919,7 +920,7 @@ export default function CreditosPanel({
                               <span> • Registrado por: <strong className="text-slate-800 font-sans font-bold">{mov.usuario}</strong></span>
                             )}
                             {mov.sucursal && (
-                              <span> • Sucursal: <strong className="text-slate-800 font-sans">{mov.sucursal}</strong></span>
+                              <span> • Sucursal: <strong className="text-slate-800 font-sans">{formatStoreName(mov.sucursal)}</strong></span>
                             )}
                           </p>
                         </div>
@@ -985,7 +986,7 @@ export default function CreditosPanel({
                     className="bg-white text-gray-900 w-full p-2.5 border border-gray-250 rounded-xl font-bold"
                   >
                     {stores.filter(s => s.active).map((st) => (
-                      <option key={st.id} value={st.name}>{st.name}</option>
+                      <option key={st.id} value={st.name}>{formatStoreName(st.name)}</option>
                     ))}
                   </select>
                 </div>

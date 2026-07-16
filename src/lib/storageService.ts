@@ -108,7 +108,11 @@ export const uploadAsset = async (file: File, bucket: BucketName): Promise<strin
 
   const { error } = await supabase.storage
     .from(bucket)
-    .upload(fileName, fileToUpload, { cacheControl: '3600', upsert: false });
+    .upload(fileName, fileToUpload, {
+      cacheControl: '3600',
+      upsert: false,
+      contentType: fileToUpload.type || 'image/webp'
+    });
 
   if (error) {
     throw error;

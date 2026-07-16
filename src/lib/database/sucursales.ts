@@ -101,3 +101,22 @@ export async function addOrUpdateStore(store: StoreInfo): Promise<void> {
     'guardarSucursal'
   );
 }
+
+/**
+ * Transforma el ID o nombre técnico de la sucursal para su presentación visual.
+ * Elimina prefijo store_, reemplaza _ por espacios, capitaliza cada palabra y maneja casos especiales.
+ */
+export function formatStoreName(name: string | null | undefined): string {
+  if (!name) return '';
+  let formatted = name.replace(/^store_/, '');
+  if (formatted === 'bagels_sushi') return 'Bagels & Sushi';
+  
+  return formatted
+    .split('_')
+    .map(word => {
+      const lower = word.toLowerCase();
+      if (lower === 'kfc') return 'KFC';
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    })
+    .join(' ');
+}

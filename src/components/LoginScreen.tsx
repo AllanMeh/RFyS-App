@@ -9,6 +9,7 @@ import { loginWithPhoneAndPin } from '../lib/authService';
 import type { AuthUser } from '../lib/authService';
 import type { ClientAccount, StoreInfo } from '../types';
 import StoreSelectorModal from './StoreSelectorModal';
+import { formatStoreName } from '../lib/database/sucursales';
 
 interface LoginScreenProps {
   onLogin: (user: AuthUser) => void;
@@ -553,7 +554,7 @@ export default function LoginScreen({ onLogin, clientAccounts, onClientLogin, on
                 {selectedStoreName ? (
                   <>
                     <Store size={18} style={{ color: 'rgba(255,255,255,0.7)' }} />
-                    <span style={{ flex: 1 }}>{selectedStoreName}</span>
+                    <span style={{ flex: 1 }}>{formatStoreName(selectedStoreName)}</span>
                   </>
                 ) : (
                   <>

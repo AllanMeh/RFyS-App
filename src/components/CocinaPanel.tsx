@@ -5,6 +5,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Order, ClientAccount, UserAccount } from '../types';
+import { formatStoreName } from '../lib/database/sucursales';
 import { Clock, ChefHat, Play, CheckCircle2, AlertTriangle, Flame, Timer } from 'lucide-react';
 
 interface CocinaPanelProps {
@@ -79,7 +80,7 @@ export default function CocinaPanel({ orders, onUpdateStatus, onCancelOrder }: C
         const storeVal = match.replace('Tienda:', '').trim();
         if (storeVal && !storeVal.includes('Central') && !storeVal.includes('Harbor') && !storeVal.includes('Station')) {
           if (storeVal.toLowerCase().includes('mesa') || storeVal.toLowerCase().includes('local')) return 'Mesa';
-          return storeVal;
+          return formatStoreName(storeVal);
         }
       }
     }
@@ -89,7 +90,7 @@ export default function CocinaPanel({ orders, onUpdateStatus, onCancelOrder }: C
       const match = order.clientName.match(/\(([^)]+)\)/);
       if (match?.[1]) {
         const val = match[1].trim();
-        if (!val.includes('Central') && !val.includes('Harbor') && !val.includes('Station')) return val;
+        if (!val.includes('Central') && !val.includes('Harbor') && !val.includes('Station')) return formatStoreName(val);
       }
     }
     return 'Mesa';

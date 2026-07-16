@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Product, OrderItem, Order, ClientDebt, StoreInfo } from '../types';
+import { formatStoreName } from '../lib/database/sucursales';
 import { 
   ShoppingCart, Plus, Minus, Trash2, Search, Sparkles, Send, X, 
   ArrowRight, UserPlus, CreditCard, ChevronRight, Check, AlertCircle, 
@@ -1561,7 +1562,7 @@ export default function POSPanel({
                 >
                   {stores.filter(s => s.active).map((st) => (
                     <option key={st.id} value={st.name}>
-                      {st.name}
+                      {formatStoreName(st.name)}
                     </option>
                   ))}
                 </select>

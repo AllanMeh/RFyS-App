@@ -8,6 +8,7 @@ import { seedProductosToSupabase, type SeedResult } from '../lib/productosServic
 import supabase from '../lib/supabase';
 import { uploadAsset } from '../lib/storageService';
 import { Product, Order, ClientDebt, UserAccount, Role, CajaStatus, StoreInfo, Coupon, ClientAccount } from '../types';
+import { formatStoreName } from '../lib/database/sucursales';
 import { 
   Package, 
   Plus, 
@@ -2316,7 +2317,7 @@ export default function AdminPanel({
                       <div className="flex justify-between items-start">
                         <div>
                           <strong className="text-gray-950 font-sans block">{client.name}</strong>
-                          <span className="text-[10px] text-gray-400">{client.branch}</span>
+                          <span className="text-[10px] text-gray-400">{formatStoreName(client.branch)}</span>
                         </div>
                         <span className="text-md font-bold font-mono text-[#bb171d]">${client.balance.toFixed(2)}</span>
                       </div>
@@ -2502,7 +2503,7 @@ export default function AdminPanel({
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-extrabold text-sm text-gray-900 font-sans">{store.name}</span>
+                        <span className="font-extrabold text-sm text-gray-900 font-sans">{formatStoreName(store.name)}</span>
                         <span className={`text-[9px] px-1.5 py-0.5 rounded font-mono font-bold ${
                           store.active 
                             ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
@@ -2906,7 +2907,7 @@ export default function AdminPanel({
                             />
                             <div className="flex-1 min-w-0">
                               <div className="text-xs font-bold text-gray-900 truncate">{client.name}</div>
-                              <div className="text-[10px] text-gray-400 font-semibold">{client.phone} | {client.defaultStore}</div>
+                              <div className="text-[10px] text-gray-400 font-semibold">{client.phone} | {formatStoreName(client.defaultStore)}</div>
                             </div>
                           </div>
                         );
