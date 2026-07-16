@@ -135,12 +135,14 @@ export default function ClientPanel({
     : null;
 
   useEffect(() => {
-    if (clientCreditProfile && !['Cerrada', 'Archivada', 'Eliminada'].includes(clientCreditProfile.status)) {
-      setPaymentMethod('Crédito');
-    } else {
-      setPaymentMethod('Pendiente');
-    }
+    // El método de pago siempre inicia con 'Pendiente' (Pagar en sucursal) por defecto
+    setPaymentMethod('Pendiente');
   }, [clientCreditProfile]);
+
+  // Desplazar automáticamente al inicio al cambiar de pestaña
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [activeClientTab]);
 
   // Filter products for the menu (noDisponibleHoy === false && oculto === false)
   // Also order them by the 'orden' field
@@ -967,7 +969,7 @@ export default function ClientPanel({
       setClientCart([]);
       setAppliedCoupon(null);
       setSelectedCouponCode('');
-      setPaymentMethod(clientCreditProfile && !['Cerrada', 'Archivada', 'Eliminada'].includes(clientCreditProfile.status) ? 'Crédito' : 'Pendiente');
+      setPaymentMethod('Pendiente');
       setActiveClientTab('pedidos');
       alert(`¡Pedido ${newOrder.id} enviado exitosamente! Puedes revisar el estado en tiempo real.`);
     } catch (err: any) {
@@ -1399,9 +1401,7 @@ export default function ClientPanel({
       {/* Main client container */}
       <main 
         className={`flex-grow max-w-4xl w-full mx-auto p-4 space-y-6 ${
-          clientCart.length > 0 
-            ? 'pb-[calc(7.5rem+env(safe-area-inset-bottom,0px))] sm:pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))]' 
-            : 'pb-[calc(3.75rem+env(safe-area-inset-bottom,0px))] sm:pb-6'
+          clientCart.length > 0 ? 'main-client-container-has-cart' : 'main-client-container-empty-cart'
         }`}
       >
         
@@ -1423,52 +1423,7 @@ export default function ClientPanel({
           <div className="absolute right-0 top-0 text-9xl opacity-5 pointer-events-none">🍊</div>
         </div>
 
-        {/* --- TABS --- */}
-        <div className="flex border-b border-gray-250 dark:border-slate-800 pb-0.5 gap-2 scrollbar-none overflow-x-auto text-xs">
-          <button
-            onClick={() => setActiveClientTab('menu')}
-            className={`py-2.5 px-4 font-bold rounded-t-xl transition-all ${
-              activeClientTab === 'menu'
-                ? 'bg-white dark:bg-slate-900 border-t-2 border-l border-r border-[#904d00] dark:border-amber-500 text-[#904d00] dark:text-amber-500'
-                : 'text-gray-500 hover:text-gray-900 hover:bg-slate-100'
-            }`}
-          >
-            📋 Menú del Día
-          </button>
-          <button
-            onClick={() => setActiveClientTab('pedidos')}
-            className={`py-2.5 px-4 font-bold rounded-t-xl transition-all flex items-center gap-1.5 ${
-              activeClientTab === 'pedidos'
-                ? 'bg-white dark:bg-slate-900 border-t-2 border-l border-r border-[#904d00] dark:border-amber-500 text-[#904d00] dark:text-amber-500'
-                : 'text-gray-500 hover:text-gray-900 hover:bg-slate-100'
-            }`}
-          >
-            ⏱️ Mis Pedidos
-            {clientOrders.filter(o => o.status !== 'Entregado' && o.status !== 'Cancelado').length > 0 && (
-              <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>
-            )}
-          </button>
-          <button
-            onClick={() => setActiveClientTab('creditos')}
-            className={`py-2.5 px-4 font-bold rounded-t-xl transition-all ${
-              activeClientTab === 'creditos'
-                ? 'bg-white dark:bg-slate-900 border-t-2 border-l border-r border-[#904d00] dark:border-amber-500 text-[#904d00] dark:text-amber-500'
-                : 'text-gray-500 hover:text-gray-900 hover:bg-slate-100'
-            }`}
-          >
-            🗂️ Mi Crédito / Saldo
-          </button>
-          <button
-            onClick={() => setActiveClientTab('perfil')}
-            className={`py-2.5 px-4 font-bold rounded-t-xl transition-all ${
-              activeClientTab === 'perfil'
-                ? 'bg-white dark:bg-slate-900 border-t-2 border-l border-r border-[#904d00] dark:border-amber-500 text-[#904d00] dark:text-amber-500'
-                : 'text-gray-500 hover:text-gray-900 hover:bg-slate-100'
-            }`}
-          >
-            ⚙️ Mi Perfil / Cupones
-          </button>
-        </div>
+        {/* Navigation tabs removed - using bottom navigation bar */}
 
         {/* --- TAB CONTENT: MENU & ORDERING --- */}
         {activeClientTab === 'menu' && (
@@ -1988,9 +1943,9 @@ export default function ClientPanel({
 
       </main>
 
-      {/* FOOTER BAR FOR MOBILE */}
+      {/* FOOTER BAR FOR NAVIGATION */}
       <footer 
-        className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t p-2 flex justify-around text-[10px] font-bold text-gray-500 shadow-inner z-[90] sm:hidden"
+        className="fixed bottom-0 left-0 right-0 max-w-4xl mx-auto bg-white dark:bg-slate-900 border-t sm:border-x sm:rounded-t-2xl p-2 flex justify-around text-[10px] font-bold text-gray-500 shadow-inner z-[90] transition-colors"
         style={{ paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom, 0px))' }}
       >
         <button onClick={() => setActiveClientTab('menu')} className={`flex flex-col items-center gap-1 ${activeClientTab === 'menu' ? 'text-[#904d00]' : ''}`}>
@@ -2850,30 +2805,68 @@ export default function ClientPanel({
 
       {/* Floating fixed bottom cart bar */}
       {clientCart.length > 0 && (
-        <div 
-          className="fixed left-0 right-0 z-[80] bg-slate-900/95 dark:bg-slate-950/95 backdrop-blur-md text-white border-t border-slate-800 rounded-t-2xl shadow-[0_-4px_25px_rgba(0,0,0,0.3)] px-4 py-3 sm:px-6 animate-fade-in bottom-[calc(3.25rem+env(safe-area-inset-bottom,0px))] pb-3 sm:bottom-0 sm:pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))]"
-        >
-          <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
-            <div className="flex flex-col min-w-0">
-              <span className="text-[10px] text-orange-400 font-black uppercase tracking-wider">Tu Pedido</span>
-              <div className="flex items-center gap-2 mt-0.5">
-                <span className="text-[10px] font-black bg-orange-500/20 text-orange-400 px-2 py-0.5 rounded border border-orange-500/30">
-                  {clientCart.reduce((sum, i) => sum + i.quantity, 0)} {clientCart.reduce((sum, i) => sum + i.quantity, 0) === 1 ? 'producto' : 'productos'}
-                </span>
-                <span className="text-sm font-black font-mono text-white">
-                  Total: ${cartTotal.toFixed(2)}
-                </span>
+        <>
+          <style>{`
+            .cart-floating-bar {
+              position: fixed;
+              left: 0;
+              right: 0;
+              max-width: 56rem; /* max-w-4xl */
+              margin: 0 auto;
+              z-index: 80;
+              background-color: rgba(15, 23, 42, 0.96); /* slate-900 */
+              backdrop-filter: blur(12px);
+              border-top: 1px solid rgb(30, 41, 59); /* slate-800 */
+              border-top-left-radius: 1.25rem; /* rounded-t-2xl */
+              border-top-right-radius: 1.25rem;
+              box-shadow: 0 -4px 25px rgba(0, 0, 0, 0.35);
+              padding-left: 1rem;
+              padding-right: 1rem;
+              padding-top: 0.75rem;
+              padding-bottom: 0.75rem;
+              color: white;
+              bottom: calc(3.25rem + env(safe-area-inset-bottom, 0px)) !important;
+            }
+            .main-client-container-has-cart {
+              padding-bottom: calc(7.5rem + env(safe-area-inset-bottom, 0px)) !important;
+            }
+            .main-client-container-empty-cart {
+              padding-bottom: calc(3.75rem + env(safe-area-inset-bottom, 0px)) !important;
+            }
+            @media (min-width: 640px) {
+              .cart-floating-bar {
+                padding-left: 1.5rem;
+                padding-right: 1.5rem;
+                border-left-width: 1px;
+                border-right-width: 1px;
+                border-color: rgb(30, 41, 59);
+              }
+            }
+          `}</style>
+          
+          <div className="cart-floating-bar animate-fade-in">
+            <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
+              <div className="flex flex-col min-w-0">
+                <span className="text-[10px] text-orange-400 font-black uppercase tracking-wider">Tu Pedido</span>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-[10px] font-black bg-orange-500/20 text-orange-400 px-2 py-0.5 rounded border border-orange-500/30">
+                    {clientCart.reduce((sum, i) => sum + i.quantity, 0)} {clientCart.reduce((sum, i) => sum + i.quantity, 0) === 1 ? 'producto' : 'productos'}
+                  </span>
+                  <span className="text-sm font-black font-mono text-white">
+                    Total: ${cartTotal.toFixed(2)}
+                  </span>
+                </div>
               </div>
+              
+              <button
+                onClick={handleViewCart}
+                className="bg-[#904d00] hover:bg-amber-900 active:scale-95 text-white text-xs font-black px-5 py-2.5 rounded-xl shadow-md transition-all uppercase tracking-wider cursor-pointer border border-amber-800"
+              >
+                Ver Carrito
+              </button>
             </div>
-            
-            <button
-              onClick={handleViewCart}
-              className="bg-[#904d00] hover:bg-amber-900 active:scale-95 text-white text-xs font-black px-5 py-2.5 rounded-xl shadow-md transition-all uppercase tracking-wider cursor-pointer border border-amber-800"
-            >
-              Ver Carrito
-            </button>
           </div>
-        </div>
+        </>
       )}
 
     </div>
