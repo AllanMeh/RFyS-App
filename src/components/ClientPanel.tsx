@@ -914,6 +914,16 @@ export default function ClientPanel({
     }
   };
 
+  const handleViewCart = () => {
+    setActiveClientTab('menu');
+    setTimeout(() => {
+      const cartElement = document.getElementById('client-cart-section');
+      if (cartElement) {
+        cartElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 100);
+  };
+
   const cartSubtotal = clientCart.reduce((sum, item) => sum + item.subtotal, 0);
   
   const couponDiscount = appliedCoupon
@@ -1364,6 +1374,15 @@ export default function ClientPanel({
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Refresh Button */}
+            <button 
+              onClick={() => window.location.reload()}
+              className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-gray-700 dark:text-gray-250 flex items-center justify-center cursor-pointer hover:bg-slate-200"
+              title="Refrescar aplicación"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+            </button>
+
             {/* Theme Toggle */}
             <button 
               onClick={toggleDarkMode}
@@ -1534,7 +1553,7 @@ export default function ClientPanel({
             </div>
 
             {/* Cart preview */}
-            <div className="lg:col-span-4 space-y-4">
+            <div id="client-cart-section" className="lg:col-span-4 space-y-4">
               <div className="bg-white dark:bg-slate-900 rounded-3xl border border-gray-200 dark:border-slate-805 p-5 shadow-lg space-y-4 sticky top-24">
                 <div className="flex items-center justify-between border-b pb-3 border-gray-150 dark:border-slate-800">
                   <div className="flex items-center gap-2">
@@ -2817,6 +2836,35 @@ export default function ClientPanel({
           </div>
         );
       })()}
+
+      {/* Floating fixed bottom cart bar */}
+      {clientCart.length > 0 && (
+        <div 
+          className="fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 dark:bg-slate-950/95 backdrop-blur-md text-white border-t border-slate-800 rounded-t-2xl shadow-[0_-4px_25px_rgba(0,0,0,0.3)] px-4 py-3 sm:px-6"
+          style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}
+        >
+          <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
+            <div className="flex flex-col min-w-0">
+              <span className="text-[10px] text-orange-400 font-black uppercase tracking-wider">Tu Pedido</span>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="text-[10px] font-black bg-orange-500/20 text-orange-400 px-2 py-0.5 rounded border border-orange-500/30">
+                  {clientCart.reduce((sum, i) => sum + i.quantity, 0)} {clientCart.reduce((sum, i) => sum + i.quantity, 0) === 1 ? 'producto' : 'productos'}
+                </span>
+                <span className="text-sm font-black font-mono text-white">
+                  Total: ${cartTotal.toFixed(2)}
+                </span>
+              </div>
+            </div>
+            
+            <button
+              onClick={handleViewCart}
+              className="bg-[#904d00] hover:bg-amber-900 active:scale-95 text-white text-xs font-black px-5 py-2.5 rounded-xl shadow-md transition-all uppercase tracking-wider cursor-pointer border border-amber-800"
+            >
+              Ver Carrito
+            </button>
+          </div>
+        </div>
+      )}
 
     </div>
   );

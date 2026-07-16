@@ -91,6 +91,15 @@ export default function Header({ currentRole, onRefreshAll, activeTab, users, is
             </button>
 
 
+            {/* Discrete Reload Button */}
+            <button
+              onClick={() => window.location.reload()}
+              className="flex items-center justify-center w-8 h-8 rounded-full bg-orange-100 hover:bg-orange-200 dark:bg-slate-800 dark:text-orange-400 text-orange-650 hover:scale-105 active:scale-95 transition-all shadow-sm border border-orange-200/50 dark:border-slate-700 cursor-pointer"
+              title="Refrescar aplicación"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+            </button>
+
             {/* Dark Mode Toggle */}
             {toggleDarkMode && (
               <button
@@ -165,6 +174,15 @@ export default function Header({ currentRole, onRefreshAll, activeTab, users, is
             <span className="hidden xs:inline">ACTUALIZAR TODO</span>
           </button>
 
+
+          {/* Discrete Reload Button */}
+          <button
+            onClick={() => window.location.reload()}
+            className="flex items-center justify-center w-8 h-8 rounded-full bg-orange-100 hover:bg-orange-200 dark:bg-slate-800 dark:text-orange-400 text-orange-650 hover:scale-105 active:scale-95 transition-all shadow-sm border border-orange-200/50 dark:border-slate-700 cursor-pointer"
+            title="Refrescar aplicación"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+          </button>
 
           {/* Dark Mode Toggle */}
           {toggleDarkMode && (

@@ -75,6 +75,27 @@ export async function upsertPedido(pedido: Order): Promise<void> {
   }
 }
 
+// ─── Update parcial de status ──────────────────────────────────────────────────
+
+export async function updatePedidoStatus(id: string, status: Order['status']): Promise<Order> {
+  if (!supabase) throw new Error('Supabase no inicializado');
+  
+  const { data, error } = await supabase
+    .from('pedidos')
+    .update({ status })
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('[Sync:Pedidos] ❌ updatePedidoStatus error:', error.message);
+    throw new Error(error.message);
+  }
+
+  console.info(`[Sync:Pedidos] ⬆️ Estado del pedido ${id} actualizado a ${status}.`);
+  return fromRow(data as Record<string, unknown>);
+}
+
 // ─── Upsert bulk ─────────────────────────────────────────────────────────────
 
 export async function upsertPedidosBulk(pedidos: Order[]): Promise<void> {

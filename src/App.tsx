@@ -41,6 +41,7 @@ import { getLocalCoupons, getCoupons, saveLocalCoupons } from './lib/database/co
 import { getLocalStores, getStores, saveLocalStores, addOrUpdateStore } from './lib/database/sucursales';
 import { getLocalStoreClosed, getStoreClosed, setStoreClosed, getLocalLogoUrl, getLogoUrl, setLogoUrl as setDbLogoUrl, getLocalPolloStatus, getPolloStatus, setPolloStatus as setDbPolloStatus, getLocalMenuDelDia, getMenuDelDia, setMenuDelDia } from './lib/database/configuracion';
 import { getLocalClientAccounts, getClientAccounts, saveLocalClientAccounts, getLocalActiveClient, saveLocalActiveClient, addOrUpdateClientAccount } from './lib/database/clientAccounts';
+import { updatePedidoStatus } from './lib/pedidosService';
 
 // Safe localStorage wrapper to prevent QuotaExceededError crashes
 try {
@@ -417,14 +418,20 @@ export default function App() {
 
   // ── Fase 6: Supabase Realtime para la tabla pedidos ────────────────────────
   useEffect(() => {
+    console.log("Realtime effect ejecutado");
+    
     if (!supabase) return;
 
+    const channelName = `pedidos-${Date.now()}`;
     const channel = supabase
-      .channel('public:pedidos')
+      .channel(channelName)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'pedidos' },
         (payload) => {
+          console.log("EVENTO", payload.eventType);
+          console.log(payload);
+          
           setOrders((prevOrders) => {
             const { eventType, new: newRecord, old: oldRecord } = payload;
 
@@ -461,9 +468,7 @@ export default function App() {
         }
       )
       .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          console.info('[Supabase Realtime] Suscrito a tabla pedidos.');
-        }
+        console.log("Realtime status:", status);
       });
 
     return () => {
@@ -542,17 +547,26 @@ export default function App() {
   };
 
   // Cocina Ticket avance
-  const updateOrderStatus = (orderId: string, newStatus: 'Pendiente' | 'En preparación' | 'Listo' | 'Entregado') => {
-    setOrders(prev => prev.map(o => {
-      if (o.id === orderId) {
-        const updated = { ...o, status: newStatus };
-        editOrderDb(updated).catch(err => {
-          console.error('[Supabase Sync] Error al actualizar estado del pedido:', err);
-        });
-        return updated;
-      }
-      return o;
-    }));
+  const updateOrderStatus = async (orderId: string, newStatus: 'Pendiente' | 'En preparación' | 'Listo' | 'Entregado') => {
+    try {
+      // 1. Await update in Supabase FIRST
+      const updatedOrder = await updatePedidoStatus(orderId, newStatus);
+      
+      // 2. If successful, update local state with the returned updated order
+      setOrders(prev => {
+        const index = prev.findIndex(o => o.id === orderId);
+        if (index >= 0) {
+          const newArray = [...prev];
+          newArray[index] = updatedOrder;
+          return newArray;
+        }
+        return prev;
+      });
+    } catch (err) {
+      console.error('[Sync] Error al actualizar estado del pedido en la base de datos:', err);
+      // Opcional: mostrar un toast o alert al usuario indicando que falló
+      alert('Error al actualizar el estado del pedido. Revisa tu conexión.');
+    }
   };
 
   // Cancelar un pedido en cocina
