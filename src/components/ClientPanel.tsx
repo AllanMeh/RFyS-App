@@ -94,6 +94,38 @@ export default function ClientPanel({
   // Guard ref: prevents executeWhatsAppRegistration from running more than once per verification session
   const registrationExecuted = useRef(false);
 
+  // Dynamic layout measurement to position the cart bar above the footer
+  const footerRef = useRef<HTMLElement>(null);
+  const cartBarRef = useRef<HTMLDivElement>(null);
+  const [bottomSpacer, setBottomSpacer] = useState(0);
+  const [footerHeight, setFooterHeight] = useState(0);
+
+  useEffect(() => {
+    const updateHeights = () => {
+      let fH = 0;
+      let cH = 0;
+      
+      if (footerRef.current && window.innerWidth < 640) {
+        fH = footerRef.current.getBoundingClientRect().height;
+      }
+      
+      if (cartBarRef.current && clientCart.length > 0) {
+        cH = cartBarRef.current.getBoundingClientRect().height;
+      }
+      
+      setFooterHeight(fH);
+      setBottomSpacer(fH + cH + 16);
+    };
+
+    const timer = setTimeout(updateHeights, 50);
+    
+    window.addEventListener('resize', updateHeights);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('resize', updateHeights);
+    };
+  }, [clientCart.length]);
+
   // Recovery flow states
   const [recoveryPhone, setRecoveryPhone] = useState('');
   const [recoveryStep, setRecoveryStep] = useState<'phone' | 'verify' | 'new_password'>('phone');
@@ -1395,7 +1427,10 @@ export default function ClientPanel({
       </header>
 
       {/* Main client container */}
-      <main className="flex-grow max-w-4xl w-full mx-auto p-4 space-y-6">
+      <main 
+        className="flex-grow max-w-4xl w-full mx-auto p-4 space-y-6"
+        style={{ paddingBottom: `${bottomSpacer}px` }}
+      >
         
         {/* Welcome message */}
         <div className="bg-gradient-to-r from-orange-500 to-amber-700 rounded-3xl p-5 text-white shadow-lg relative overflow-hidden flex items-center justify-between">
@@ -1981,7 +2016,11 @@ export default function ClientPanel({
       </main>
 
       {/* FOOTER BAR FOR MOBILE */}
-      <footer className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t p-2 flex justify-around text-[10px] font-bold text-gray-500 shadow-inner z-[90] sm:hidden">
+      <footer 
+        ref={footerRef}
+        className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t p-2 flex justify-around text-[10px] font-bold text-gray-500 shadow-inner z-[90] sm:hidden"
+        style={{ paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom, 0px))' }}
+      >
         <button onClick={() => setActiveClientTab('menu')} className={`flex flex-col items-center gap-1 ${activeClientTab === 'menu' ? 'text-[#904d00]' : ''}`}>
           <span>📋</span><span>Menú</span>
         </button>
@@ -2840,8 +2879,13 @@ export default function ClientPanel({
       {/* Floating fixed bottom cart bar */}
       {clientCart.length > 0 && (
         <div 
-          className="fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 dark:bg-slate-950/95 backdrop-blur-md text-white border-t border-slate-800 rounded-t-2xl shadow-[0_-4px_25px_rgba(0,0,0,0.3)] px-4 py-3 sm:px-6"
-          style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}
+          ref={cartBarRef}
+          className="fixed left-0 right-0 z-[80] bg-slate-900/95 dark:bg-slate-950/95 backdrop-blur-md text-white border-t border-slate-800 rounded-t-2xl shadow-[0_-4px_25px_rgba(0,0,0,0.3)] px-4 py-3 sm:px-6 animate-fade-in"
+          style={{ 
+            bottom: `${footerHeight}px`,
+            paddingBottom: footerHeight > 0 ? '0.75rem' : 'calc(0.75rem + env(safe-area-inset-bottom, 0px))',
+            transition: 'bottom 0.15s ease-out'
+          }}
         >
           <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
             <div className="flex flex-col min-w-0">
