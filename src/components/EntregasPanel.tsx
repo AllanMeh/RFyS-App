@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { Order, ClientDebt } from '../types';
 import { formatStoreName } from '../lib/database/sucursales';
 import { getLocalEnRutaIds, updateEnRutaIds } from '../lib/database/entregas';
+import { CustomizationsRenderer } from './CustomizationsRenderer';
 import { 
   Truck, 
   Check, 
@@ -345,16 +346,26 @@ export default function EntregasPanel({ orders, clients, onDeliverOrder }: Entre
                     {order.items.map((it, idx) => (
                       <div key={idx} className="flex items-center gap-2">
                         <span className="text-[10px] font-black text-amber-400 shrink-0">{it.quantity}x</span>
-                        <span className="text-[12px] font-black text-slate-100 uppercase tracking-tight">{it.product.name}</span>
-                        {it.customizations.length > 0 && (
-                          <div className="flex flex-wrap gap-1">
-                            {it.customizations.map((c, ci) => (
-                              <span key={ci} className="text-[9px] text-rose-300 bg-rose-900/50 border border-rose-700/60 px-1.5 py-0.5 rounded-full">
-                                ⚡ {c}
-                              </span>
-                            ))}
-                          </div>
-                        )}
+                        {(() => {
+                          const isLegacyGuisado = it.product.name.match(/^\d+\s+[^,]+(?:,\s*\d+\s+[^,]+)*$/) && !it.product.name.toLowerCase().includes('torta') && !it.product.name.toLowerCase().includes('sandwich');
+                          const displayName = isLegacyGuisado ? 'TACOS DE GUISADO' : it.product.name;
+                          const customList = isLegacyGuisado ? [it.product.name, ...it.customizations] : it.customizations;
+
+                          return (
+                            <>
+                              <span className="text-[12px] font-black text-slate-100 uppercase tracking-tight">{displayName}</span>
+                              {customList.length > 0 && (
+                                <CustomizationsRenderer 
+                                  customizations={customList}
+                                  listClassName="flex flex-col gap-0.5 mt-1"
+                                  itemClassName="text-[9px] text-rose-300 bg-rose-900/50 border border-rose-700/60 px-1.5 py-0.5 rounded-full flex items-center w-fit"
+                                  bulletClassName="hidden"
+                                  showIcon={false}
+                                />
+                              )}
+                            </>
+                          );
+                        })()}
                       </div>
                     ))}
                   </div>
@@ -472,14 +483,31 @@ export default function EntregasPanel({ orders, clients, onDeliverOrder }: Entre
                 <div className="bg-gray-50 dark:bg-slate-700/50 p-3 rounded-lg border border-gray-150 dark:border-slate-600 divide-y divide-gray-200 dark:divide-slate-600 text-xs">
                   {selectedOrder.items.map((item, idx) => (
                     <div key={idx} className="py-2 flex justify-between items-start gap-2">
-                      <div>
-                        <span className="font-bold text-gray-950 dark:text-slate-100">{item.quantity}x</span> <span className="text-gray-700 dark:text-slate-300">{item.product.name}</span>
-                        {item.customizations.length > 0 && (
-                          <p className="text-[10px] text-rose-600 dark:text-rose-400 font-mono mt-0.5">
-                            Adicionales: {item.customizations.join(', ')}
-                          </p>
-                        )}
-                      </div>
+                      <span className="font-bold text-gray-950 dark:text-slate-100">{item.quantity}x</span> 
+                      <div className="flex-1">
+                          {(() => {
+                            const isLegacyGuisado = item.product.name.match(/^\d+\s+[^,]+(?:,\s*\d+\s+[^,]+)*$/) && !item.product.name.toLowerCase().includes('torta') && !item.product.name.toLowerCase().includes('sandwich');
+                            const displayName = isLegacyGuisado ? 'TACOS DE GUISADO' : item.product.name;
+                            const customList = isLegacyGuisado ? [item.product.name, ...item.customizations] : item.customizations;
+
+                            return (
+                              <>
+                                <p className="font-bold text-slate-800 dark:text-slate-100 uppercase text-[12px]">{displayName}</p>
+                                {customList.length > 0 && (
+                                  <div className="mt-1">
+                                    <span className="text-slate-400 font-medium">Adicionales:</span>
+                                    <CustomizationsRenderer 
+                                      customizations={customList}
+                                      listClassName="flex flex-col gap-0.5 mt-1 pl-1"
+                                      itemClassName="text-[10px] font-bold text-rose-500 flex items-start gap-1 uppercase leading-tight"
+                                      bulletClassName="text-rose-400 mt-[1px]"
+                                    />
+                                  </div>
+                                )}
+                              </>
+                            );
+                          })()}
+                        </div>
                       <span className="font-bold text-gray-900 dark:text-slate-100 font-mono">${item.subtotal.toFixed(2)}</span>
                     </div>
                   ))}

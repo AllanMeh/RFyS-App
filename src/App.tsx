@@ -272,18 +272,20 @@ export default function App() {
     return getLocalPolloStatus();
   });
 
-  useEffect(() => {
-    setDbPolloStatus(polloStatus);
-  }, [polloStatus]);
+  const handleSetLogoUrl = async (url: string) => {
+    setLogoUrl(url);
+    await setDbLogoUrl(url);
+  };
 
+  const handleSetPolloStatus = async (status: { pierna: boolean; muslo: boolean }) => {
+    setPolloStatus(status);
+    await setDbPolloStatus(status);
+  };
 
-  useEffect(() => {
-    setStoreClosed(isStoreClosed);
-  }, [isStoreClosed]);
-
-  useEffect(() => {
-    setDbLogoUrl(logoUrl);
-  }, [logoUrl]);
+  const handleSetStoreClosed = async (closed: boolean) => {
+    setIsStoreClosed(closed);
+    await setStoreClosed(closed);
+  };
 
   useEffect(() => {
     saveLocalProducts(products);
@@ -1315,9 +1317,9 @@ export default function App() {
                     users={users}
                     onUpdateUserRole={handleUpdateUserRole}
                     isStoreClosed={isStoreClosed}
-                    onSetStoreClosed={setIsStoreClosed}
+                    onSetStoreClosed={handleSetStoreClosed}
                     logoUrl={logoUrl}
-                    onSetLogoUrl={setLogoUrl}
+                    onSetLogoUrl={handleSetLogoUrl}
                     cajaState={cajaState}
                     onToggleClientPOV={() => setCurrentRole('Cliente')}
                     stores={stores}
@@ -1326,7 +1328,7 @@ export default function App() {
                     onDeleteStore={handleDeleteStore}
                     onReorderStores={handleReorderStores}
                     polloStatus={polloStatus}
-                    onUpdatePolloStatus={setPolloStatus}
+                    onUpdatePolloStatus={handleSetPolloStatus}
                     coupons={coupons}
                     setCoupons={setCoupons}
                     clientAccounts={clientAccounts}

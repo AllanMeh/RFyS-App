@@ -115,7 +115,11 @@ export const uploadAsset = async (file: File, bucket: BucketName): Promise<strin
     });
 
   if (error) {
-    throw error;
+    const detailedMessage = `Error subiendo imagen.\nBucket: ${bucket}\nError: ${error.message}`;
+    const customError = new Error(detailedMessage);
+    (customError as any).status = error.status || (error as any).statusCode || 404;
+    (customError as any).error = error.message;
+    throw customError;
   }
 
   return publicUrlData.publicUrl;

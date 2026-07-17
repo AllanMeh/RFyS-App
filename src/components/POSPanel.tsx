@@ -11,6 +11,7 @@ import {
   ArrowRight, UserPlus, CreditCard, ChevronRight, Check, AlertCircle, 
   Coffee, RefreshCw, Clock, Store, User, BookOpen, AlertTriangle, Image as ImageIcon, Package
 } from 'lucide-react';
+import { CustomizationsRenderer } from './CustomizationsRenderer';
 
 interface POSPanelProps {
   products: Product[];
@@ -853,8 +854,16 @@ export default function POSPanel({
         }
         return item.price;
 
-      default:
-        return item.price;
+      default: {
+        let basePrice = item.price;
+        if (selectedVariant) {
+          const match = selectedVariant.match(/\(\$([0-9.]+)\)/);
+          if (match) {
+            basePrice = parseFloat(match[1]);
+          }
+        }
+        return basePrice;
+      }
     }
   };
 
@@ -1629,9 +1638,12 @@ export default function POSPanel({
                         {item.product.name}
                       </h4>
                       {item.customizations.length > 0 && (
-                        <p className="text-[9px] text-gray-500 font-mono italic">
-                          {item.customizations.join(' | ')}
-                        </p>
+                        <CustomizationsRenderer 
+                          customizations={item.customizations}
+                          listClassName="flex flex-col gap-0.5 mt-1 pl-1"
+                          itemClassName="text-[10px] text-slate-500 font-mono italic flex items-start gap-1 leading-tight"
+                          bulletClassName="text-slate-400 mt-[1px]"
+                        />
                       )}
                     </div>
                     <button 

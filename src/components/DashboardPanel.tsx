@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { Order, ClientDebt, Product, ActiveTab } from '../types';
 import { formatStoreName } from '../lib/database/sucursales';
+import { CustomizationsRenderer } from './CustomizationsRenderer';
 import { 
   DollarSign, 
   ShoppingBag, 
@@ -557,9 +558,25 @@ export default function DashboardPanel({
                           </span>
                           
                           {/* Items and customization summary description */}
-                          <p className="text-[11px] text-gray-600 font-medium font-serif mt-1 italic leading-tight">
-                            {order.items.map(i => `${i.quantity}x ${i.product.name} (${i.customizations.join(', ') || 'Tradicional'})`).join(' • ')}
-                          </p>
+                          <div className="mt-2 space-y-2">
+                            {order.items.map((i, idx) => (
+                              <div key={idx} className="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-2 border border-gray-100 dark:border-slate-700/50">
+                                <p className="text-[11px] text-gray-700 dark:text-slate-300 font-bold font-sans leading-tight">
+                                  {i.quantity}x {i.product.name}
+                                </p>
+                                {i.customizations.length > 0 ? (
+                                  <CustomizationsRenderer 
+                                    customizations={i.customizations}
+                                    listClassName="flex flex-col gap-0.5 mt-1 pl-1"
+                                    itemClassName="text-[10px] text-gray-500 font-serif italic flex items-start gap-1 leading-tight"
+                                    bulletClassName="text-gray-400 mt-[1px]"
+                                  />
+                                ) : (
+                                  <p className="text-[10px] text-gray-400 font-serif italic mt-0.5 pl-1">Tradicional</p>
+                                )}
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       </div>
 

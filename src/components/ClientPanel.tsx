@@ -9,7 +9,7 @@ import StoreSelectorModal from './StoreSelectorModal';
 import { requestNotificationPermission } from '../services/notifications';
 import AvatarUploader from './AvatarUploader';
 import { formatStoreName } from '../lib/database/sucursales';
-
+import { CustomizationsRenderer } from './CustomizationsRenderer';
 
 interface ClientPanelProps {
   products: Product[];
@@ -527,7 +527,14 @@ export default function ClientPanel({
       }
     }
 
-    return item.price;
+    let basePrice = item.price;
+    if (selectedVariant) {
+      const match = selectedVariant.match(/\(\$([0-9.]+)\)/);
+      if (match) {
+        basePrice = parseFloat(match[1]);
+      }
+    }
+    return basePrice;
   };
 
   const shouldNotRound = (product: Product) => {
@@ -863,11 +870,17 @@ export default function ClientPanel({
       customizationsStr.push(`Sin: ${excludedIngredients.join(', ')}`);
     }
 
-    const finalSubtotal = shouldNotRound(selectedProductForVariants) ? selectedProductForVariants.price : Math.ceil(selectedProductForVariants.price / 5) * 5;
+    const compiledProduct: Product = {
+      ...selectedProductForVariants,
+      price: calculatedPrice
+    };
+
+    const rawSubtotal = calculatedPrice;
+    const finalSubtotal = shouldNotRound(compiledProduct) ? rawSubtotal : Math.ceil(rawSubtotal / 5) * 5;
 
     setClientCart(prev => {
       return [...prev, {
-        product: selectedProductForVariants,
+        product: compiledProduct,
         quantity: 1,
         customizations: customizationsStr,
         subtotal: finalSubtotal
@@ -1539,7 +1552,12 @@ export default function ClientPanel({
                           <div>
                             <h4 className="text-xs font-bold text-gray-900 dark:text-gray-100 leading-tight">{item.product.name}</h4>
                             {item.customizations.length > 0 && (
-                              <p className="text-[9px] text-gray-500 font-mono italic mt-0.5">{item.customizations.join(' | ')}</p>
+                              <CustomizationsRenderer 
+                                customizations={item.customizations}
+                                listClassName="flex flex-col gap-0.5 mt-1 pl-1"
+                                itemClassName="text-[9px] text-gray-500 font-mono italic flex items-start gap-1 leading-tight"
+                                bulletClassName="text-gray-400 mt-[1px]"
+                              />
                             )}
                           </div>
                           <button 

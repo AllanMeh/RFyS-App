@@ -7,6 +7,7 @@ import React, { useEffect, useState } from 'react';
 import { Order, ClientAccount, UserAccount } from '../types';
 import { formatStoreName } from '../lib/database/sucursales';
 import { Clock, ChefHat, Play, CheckCircle2, AlertTriangle, Flame, Timer } from 'lucide-react';
+import { CustomizationsRenderer } from './CustomizationsRenderer';
 
 interface CocinaPanelProps {
   orders: Order[];
@@ -232,18 +233,29 @@ export default function CocinaPanel({ orders, onUpdateStatus, onCancelOrder }: C
                           {item.quantity}x
                         </span>
                         <div className="min-w-0 flex-1">
-                          <p className="font-black text-slate-100 uppercase leading-tight text-[12px] tracking-tight">
-                            {item.product.name}
-                          </p>
-                          {item.customizations.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-1">
-                              {item.customizations.map((c, ci) => (
-                                <span key={ci} className="text-[9px] font-bold text-rose-300 bg-rose-900/50 border border-rose-700/60 px-1.5 py-0.5 rounded-full uppercase">
-                                  ⚡ {c}
-                                </span>
-                              ))}
-                            </div>
-                          )}
+                          {(() => {
+                            // Detect if the product name itself is the string of guisados
+                            const isLegacyGuisado = item.product.name.match(/^\d+\s+[^,]+(?:,\s*\d+\s+[^,]+)*$/) && !item.product.name.toLowerCase().includes('torta') && !item.product.name.toLowerCase().includes('sandwich');
+                            
+                            const displayName = isLegacyGuisado ? 'TACOS DE GUISADO' : item.product.name;
+                            const customList = isLegacyGuisado ? [item.product.name, ...item.customizations] : item.customizations;
+
+                            return (
+                              <>
+                                <p className="font-black text-slate-100 uppercase leading-tight text-[12px] tracking-tight">
+                                  {displayName}
+                                </p>
+                                {customList.length > 0 && (
+                                  <CustomizationsRenderer 
+                                    customizations={customList}
+                                    listClassName="flex flex-col gap-0.5 mt-1.5 pl-1"
+                                    itemClassName="text-[10px] font-bold text-rose-300 flex items-start gap-1 uppercase leading-tight"
+                                    bulletClassName="text-rose-500 mt-[1px]"
+                                  />
+                                )}
+                              </>
+                            );
+                          })()}
                         </div>
                       </div>
                     ))}
