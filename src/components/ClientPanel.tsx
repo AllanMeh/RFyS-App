@@ -148,7 +148,7 @@ export default function ClientPanel({
   // Filter products for the menu (noDisponibleHoy === false && oculto === false)
   // Also order them by the 'orden' field
   const menuProducts = products
-    .filter(p => !p.noDisponibleHoy && !p.oculto)
+    .filter(p => !p.noDisponibleHoy && !p.oculto && p.active !== false)
     .sort((a, b) => (a.orden || 0) - (b.orden || 0));
 
   // --- ACTIONS ---
@@ -567,7 +567,7 @@ export default function ClientPanel({
       return;
     }
 
-    if (product.agotado) {
+    if (product.agotado || product.active === false) {
       alert('Este producto está agotado por el momento.');
       return;
     }
