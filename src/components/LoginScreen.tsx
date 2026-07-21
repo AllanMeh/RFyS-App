@@ -507,7 +507,7 @@ export default function LoginScreen({ onLogin, clientAccounts, onClientLogin, on
                   type="text"
                   value={clientName}
                   onChange={e => setClientName(e.target.value)}
-                  placeholder="Ej. Juan Pérez"
+                  placeholder="Nombre"
                   autoFocus
                   style={{
                     width: '100%',

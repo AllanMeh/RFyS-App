@@ -41,6 +41,7 @@ export interface Product {
   layout2Options?: { name: string; price: number; active: boolean }[];
   layout2Extras?: { name: string; price: number; perPiece: boolean; active: boolean }[];
   applyRounding?: boolean;
+  layoutIcon?: 'none' | 'taco' | 'custom';
 
   // Layout 3 properties (Platillo)
   layout3Preps?: { name: string; priceDiff?: number; active: boolean }[];

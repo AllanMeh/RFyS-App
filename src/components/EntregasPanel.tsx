@@ -157,14 +157,40 @@ export default function EntregasPanel({ orders, clients, onDeliverOrder }: Entre
     alert(`Pedido ${order.id} registrado a CRÉDITO y movido a Historial.`);
   };
 
-  // Filter orders based on status & enRutaIds helper lists
+  const getOrderSortTime = (order: Order) => {
+    let target = new Date(order.timestamp);
+    target.setMinutes(target.getMinutes() + 15);
+    if (order.notes) {
+      const parts = order.notes.split(' | ');
+      const entregaPart = parts.find(p => p.startsWith('Entrega:'));
+      if (entregaPart) {
+        const val = entregaPart.replace('Entrega:', '').trim();
+        if (val.toLowerCase() === 'ahora') {
+          return 0; // Prioritize ASAP absolutely
+        } else {
+          const timeMatch = val.match(/(\d+):(\d+)/);
+          if (timeMatch) {
+            const customDate = new Date(order.timestamp);
+            let h = parseInt(timeMatch[1]);
+            const m = parseInt(timeMatch[2]);
+            if (val.toLowerCase().includes('pm') && h !== 12) h += 12;
+            if (val.toLowerCase().includes('am') && h === 12) h = 0;
+            customDate.setHours(h, m, 0, 0);
+            target = customDate;
+          }
+        }
+      }
+    }
+    return target.getTime();
+  };
+
   const listoOrders = orders
     .filter(o => o.status === 'Listo' && !enRutaIds.includes(o.id))
-    .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()); // más urgente primero
+    .sort((a, b) => getOrderSortTime(a) - getOrderSortTime(b)); // más urgente primero
 
   const enRutaOrders = orders
     .filter(o => o.status === 'Listo' && enRutaIds.includes(o.id))
-    .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()); // más urgente primero
+    .sort((a, b) => getOrderSortTime(a) - getOrderSortTime(b)); // más urgente primero
 
   const entregadoOrders = orders
     .filter(o => o.status === 'Entregado')

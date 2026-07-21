@@ -44,13 +44,43 @@ export const CustomizationsRenderer: React.FC<CustomizationsRendererProps> = ({
           return [{ isGuisado: true, items: guisadoMatches.map(m => m[0].trim()) }];
         }
 
+        // Support for Extras list (like in Tortas)
+        if (text.match(/^Extras:\s*/i)) {
+          text = text.replace(/^Extras:\s*/i, '');
+          if (text.includes(',')) {
+             return [{ isExtras: true, isGuisado: false, isSin: false, items: text.split(',').map(s => s.trim()).filter(Boolean) }];
+          }
+          return [{ isExtras: true, isGuisado: false, isSin: false, items: [text] }];
+        }
+
+        // Support for Sin: list
+        if (text.match(/^Sin:\s*/i)) {
+          text = text.replace(/^Sin:\s*/i, '');
+          if (text.includes(',')) {
+             return [{ isExtras: false, isGuisado: false, isSin: true, items: text.split(',').map(s => s.trim()).filter(Boolean) }];
+          }
+          return [{ isExtras: false, isGuisado: false, isSin: true, items: [text] }];
+        }
+
         // Standard custom option
-        return [{ isGuisado: false, items: [text] }];
+        return [{ isExtras: false, isGuisado: false, isSin: false, items: [text] }];
       }).map((group, groupIndex) => (
         <React.Fragment key={groupIndex}>
           {group.isGuisado && (
             <li className="text-[10px] font-black text-amber-600 dark:text-amber-500 flex items-center gap-1 uppercase tracking-wider mt-1 mb-0.5">
               {showIcon && <span>⚡</span>} Guisos:
+            </li>
+          )}
+          
+          {group.isSin && (
+            <li className="text-[10px] font-black text-rose-600 dark:text-rose-500 flex items-center gap-1 uppercase tracking-wider mt-1 mb-0.5">
+              {showIcon && <span>❌</span>} Sin:
+            </li>
+          )}
+          
+          {group.isExtras && (
+            <li className="text-[10px] font-black text-emerald-600 dark:text-emerald-500 flex items-center gap-1 uppercase tracking-wider mt-1 mb-0.5">
+              {showIcon && <span>➕</span>} Extras:
             </li>
           )}
           
@@ -71,8 +101,7 @@ export const CustomizationsRenderer: React.FC<CustomizationsRendererProps> = ({
 
             return (
               <li key={ci} className={itemClassName}>
-                {showIcon && !group.isGuisado && <span className={bulletClassName}>•</span>}
-                {showIcon && group.isGuisado && <span className={bulletClassName}>•</span>}
+                {showIcon && <span className={bulletClassName}>•</span>}
                 <span>{displayText}</span>
               </li>
             );

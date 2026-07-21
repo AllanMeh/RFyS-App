@@ -112,6 +112,45 @@ export default function ClientPanel({
   // Variant Modal State
   const [selectedProductForVariants, setSelectedProductForVariants] = useState<Product | null>(null);
   const [selectedVariant, setSelectedVariant] = useState('');
+  const [horaEntrega, setHoraEntrega] = useState('Ahora');
+
+  const getAvailableHours = () => {
+    const slots = [
+      { label: 'Ahora', hour: 0, minute: 0 },
+      { label: '7:00 AM', hour: 7, minute: 0 },
+      { label: '7:30 AM', hour: 7, minute: 30 },
+      { label: '8:00 AM', hour: 8, minute: 0 },
+      { label: '8:30 AM', hour: 8, minute: 30 },
+      { label: '9:00 AM', hour: 9, minute: 0 },
+      { label: '9:30 AM', hour: 9, minute: 30 },
+      { label: '10:00 AM', hour: 10, minute: 0 },
+      { label: '10:30 AM', hour: 10, minute: 30 },
+      { label: '11:00 AM', hour: 11, minute: 0 },
+      { label: '11:30 AM', hour: 11, minute: 30 },
+      { label: '12:00 PM', hour: 12, minute: 0 },
+      { label: '12:30 PM', hour: 12, minute: 30 },
+      { label: '1:00 PM', hour: 13, minute: 0 },
+      { label: '1:30 PM', hour: 13, minute: 30 },
+      { label: '2:00 PM', hour: 14, minute: 0 },
+      { label: '2:30 PM', hour: 14, minute: 30 },
+      { label: '3:00 PM', hour: 15, minute: 0 },
+      { label: '3:30 PM', hour: 15, minute: 30 },
+      { label: '4:00 PM', hour: 16, minute: 0 },
+      { label: '4:30 PM', hour: 16, minute: 30 },
+      { label: '5:00 PM', hour: 17, minute: 0 },
+    ];
+
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+
+    return slots.filter((slot) => {
+      if (slot.label === 'Ahora') return true;
+      if (currentHour > slot.hour) return false;
+      if (currentHour === slot.hour && currentMinute > slot.minute) return false;
+      return true;
+    });
+  };
   const [selectedCustomizations, setSelectedCustomizations] = useState<string[]>([]);
   const [excludedIngredients, setExcludedIngredients] = useState<string[]>([]);
   const [selectedPolloPiece, setSelectedPolloPiece] = useState<'Muslo' | 'Pierna' | ''>('');
@@ -132,7 +171,7 @@ export default function ClientPanel({
 
   // Find Client credit profile from global clients list
   const clientCreditProfile = activeClient 
-    ? clients.find(c => c.phone === activeClient.phone)
+    ? clients.find(c => c.id === activeClient.id || (c.phone !== 'Sin teléfono' && c.phone === activeClient.phone))
     : null;
 
   useEffect(() => {
@@ -148,7 +187,7 @@ export default function ClientPanel({
   // Filter products for the menu (noDisponibleHoy === false && oculto === false)
   // Also order them by the 'orden' field
   const menuProducts = products
-    .filter(p => !p.noDisponibleHoy && !p.oculto && p.active !== false)
+    .filter(p => !p.noDisponibleHoy && !p.oculto && p.active !== false && !p.agotado)
     .sort((a, b) => (a.orden || 0) - (b.orden || 0));
 
   // --- ACTIONS ---
@@ -423,7 +462,7 @@ export default function ClientPanel({
   };
 
   // Pricing calculator helper for ClientPanel layout options
-  const getCurrentClientCalculatedPrice = () => {
+  const getClientBasePrice = () => {
     if (!selectedProductForVariants) return 0;
     const item = selectedProductForVariants;
 
@@ -537,27 +576,24 @@ export default function ClientPanel({
     return basePrice;
   };
 
+  const getCurrentClientCalculatedPrice = () => {
+    if (!selectedProductForVariants) return 0;
+    const item = selectedProductForVariants;
+    let base = getClientBasePrice();
+    let extra = 0;
+    if (item.extraIngredients && item.extraIngredients.length > 0) {
+      item.extraIngredients.forEach(ext => {
+        if (selectedExtras.includes(ext.name)) {
+          extra += ext.price;
+        }
+      });
+    }
+    return base + extra;
+  };
+
   const shouldNotRound = (product: Product) => {
     if (!product) return false;
-    const layout = product.productLayout;
-    if (layout === 'layout_3_platillo' || layout === 'layout_4_huevos' || layout === 'layout_7_calientes' || layout === 'layout_8_aguas' || layout === 'layout_9_jugos') {
-      return true;
-    }
-    if (layout === 'layout_2_cantidades' && product.applyRounding === false) {
-      return true;
-    }
-    const type = product.productType;
-    if (type === 'cafe_olla' || type === 'nescafe' || type === 'te') {
-      return true;
-    }
-    const name = (product.name || '').toLowerCase();
-    const id = (product.id || '').toLowerCase();
-    if (id.includes('olla') || name.includes('café de olla') || name.includes('cafe de olla') ||
-        id.includes('nesc') || name.includes('nescafé') || name.includes('nescafe') ||
-        id.includes('te') || name.includes('té') || name.includes('te ')) {
-      return true;
-    }
-    return false;
+    return product.applyRounding === false;
   };
 
   // Cart operations
@@ -589,7 +625,12 @@ export default function ClientPanel({
       setTortillasQty(6);
       setExcludedDefaults([]);
       setSinAzucar(false);
-      setSugarSpoons(0);
+      const lowName = product.name.toLowerCase();
+      if (product.productType === 'cafe_olla' || product.productType === 'nescafe' || lowName.includes('café de olla') || lowName.includes('cafe de olla') || lowName.includes('nescafé') || lowName.includes('nescafe')) {
+        setSugarSpoons(1);
+      } else {
+        setSugarSpoons(0);
+      }
       setSelectedPolloPiece('');
 
       setSelectedProductForVariants(product);
@@ -683,7 +724,7 @@ export default function ClientPanel({
             return {
               ...item,
               quantity: nextQty,
-              subtotal: shouldNotRound(product) ? rawSub : Math.ceil(rawSub / 5) * 5
+              subtotal: rawSub
             };
           }
           return item;
@@ -693,7 +734,7 @@ export default function ClientPanel({
         product,
         quantity: 1,
         customizations: [],
-        subtotal: shouldNotRound(product) ? product.price : Math.ceil(product.price / 5) * 5
+        subtotal: product.price
       }];
     });
 
@@ -771,12 +812,9 @@ export default function ClientPanel({
         }
 
         case 'layout_6_proteina': {
-          const flavorAndExtras = selectedExtras.length > 0
-            ? `${selectedFlavor} y ${selectedExtras.join(' y ')}`
-            : selectedFlavor;
           derivedName = item.layoutAllowPresentation && selectedSize
-            ? `${item.name} ${selectedSize} (${flavorAndExtras})`
-            : `${item.name} (${flavorAndExtras})`;
+            ? `${item.name} ${selectedSize} (${selectedFlavor})`
+            : `${item.name} (${selectedFlavor})`;
           
           const removed = item.layout6Removables?.filter(r => excludedDefaults.includes(r.name)).map(r => r.name);
           if (removed && removed.length > 0) {
@@ -827,6 +865,13 @@ export default function ClientPanel({
         }
       }
 
+      if (excludedIngredients.length > 0 && item.productLayout !== 'layout_6_proteina') {
+        detailsList.push(`Sin: ${excludedIngredients.join(', ')}`);
+      }
+      if (selectedExtras.length > 0 && item.productLayout !== 'layout_6_proteina') {
+        detailsList.push(`Extras: ${selectedExtras.join(', ')}`);
+      }
+
       const isPollo = item.layout3AllowPolloPiece || item.name.toLowerCase().includes('pollo') || (item.description && item.description.toLowerCase().includes('pollo'));
       if (isPollo && selectedPolloPiece) {
         detailsList.push(`Pieza: ${selectedPolloPiece}`);
@@ -843,7 +888,7 @@ export default function ClientPanel({
       };
 
       const rawSubtotal = calculatedPrice;
-      const finalSubtotal = shouldNotRound(item) ? rawSubtotal : Math.ceil(rawSubtotal / 5) * 5;
+      const finalSubtotal = rawSubtotal;
 
       setClientCart(prev => [...prev, {
         product: compiledProduct,
@@ -876,7 +921,7 @@ export default function ClientPanel({
     };
 
     const rawSubtotal = calculatedPrice;
-    const finalSubtotal = shouldNotRound(compiledProduct) ? rawSubtotal : Math.ceil(rawSubtotal / 5) * 5;
+    const finalSubtotal = rawSubtotal;
 
     setClientCart(prev => {
       return [...prev, {
@@ -906,7 +951,7 @@ export default function ClientPanel({
           return {
             ...item,
             quantity: nextQty,
-            subtotal: shouldNotRound(item.product) ? rawSub : Math.ceil(rawSub / 5) * 5
+            subtotal: rawSub
           };
         }
         return item;
@@ -950,7 +995,7 @@ export default function ClientPanel({
         : appliedCoupon.value)
     : 0;
 
-  const cartTotal = Math.max(0, Math.ceil((cartSubtotal - couponDiscount) / 5) * 5);
+  const cartTotal = Math.max(0, cartSubtotal - couponDiscount);
 
   const handleCheckoutSubmit = async () => {
     if (clientCart.length === 0) return;
@@ -969,7 +1014,7 @@ export default function ClientPanel({
       clientName: activeClient.name,
       clientId: activeClient.id, // Corrección: Usar ID real ('CRED-...') que existe en la tabla clientes
       timestamp: new Date().toISOString(),
-      notes: `Tienda: ${activeClient.defaultStore} | Canales: Portal Cliente`
+      notes: `Tienda: ${activeClient.defaultStore} | Canales: Portal Cliente | Entrega: ${horaEntrega}`
     };
 
     try {
@@ -1661,6 +1706,23 @@ export default function ClientPanel({
                         <span className="text-base font-mono text-emerald-800 dark:text-emerald-400">${cartTotal.toFixed(2)}</span>
                       </div>
                     </div>
+                    
+                    <div className="mb-4 bg-white/50 dark:bg-slate-800/50 p-2 rounded-xl border border-gray-150 dark:border-slate-700">
+                      <label className="text-[10px] font-black text-gray-500 uppercase tracking-wider block mb-1">
+                        Programar Entrega:
+                      </label>
+                      <select 
+                        value={horaEntrega}
+                        onChange={(e) => setHoraEntrega(e.target.value)}
+                        className="w-full bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 p-2 rounded-lg text-xs font-bold focus:ring-1 focus:ring-amber-500 focus:outline-none"
+                      >
+                        {getAvailableHours().map(slot => (
+                          <option key={slot.label} value={slot.label}>
+                            {slot.label === 'Ahora' ? 'Para Ahora' : slot.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
                     <button
                       onClick={handleCheckoutSubmit}
@@ -1987,7 +2049,7 @@ export default function ClientPanel({
         const calculatedPrice = getCurrentClientCalculatedPrice();
         const displayedPrice = shouldNotRound(item)
           ? calculatedPrice
-          : Math.ceil(calculatedPrice / 5) * 5;
+          : calculatedPrice;
 
         const totalPieces = (
           item.productLayout === 'layout_2_cantidades'
@@ -2021,9 +2083,11 @@ export default function ClientPanel({
                             return (
                               <div key={opt.name} className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 p-3 flex items-center justify-between shadow-xs hover:border-amber-305 transition-colors">
                                 <div className="flex items-center gap-2.5">
-                                  <div className="w-8 h-8 bg-amber-50 dark:bg-slate-700 rounded-lg flex items-center justify-center text-lg select-none">
-                                    🌮
-                                  </div>
+                                  {item.layoutIcon !== 'none' && (
+                                    <div className="w-8 h-8 bg-amber-50 dark:bg-slate-700 rounded-lg flex items-center justify-center text-lg select-none">
+                                      {item.layoutIcon === 'taco' ? '🌮' : item.layoutIcon === 'custom' ? '✨' : '🌮'}
+                                    </div>
+                                  )}
                                   <div>
                                     <span className="text-xs font-sans font-black text-gray-905 dark:text-gray-100 block">{opt.name}</span>
                                     <span className="text-[10px] text-gray-500 dark:text-gray-400 font-mono tracking-tight">${opt.price.toFixed(2)} c/u</span>
@@ -2739,6 +2803,57 @@ export default function ClientPanel({
                       </div>
                     )}
                   </>
+                )}
+
+                {/* UNIVERSAL INGREDIENTS CONFIGURATION FOR ALL LAYOUTS */}
+                {item.removableIngredients && item.removableIngredients.length > 0 && (
+                  <div className="space-y-1.5 border-t border-gray-150 dark:border-slate-800 pt-3">
+                    <label className="text-[10px] font-black text-rose-500 uppercase tracking-wider block font-bold font-sans">
+                      Sin Ingrediente (Remover):
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {item.removableIngredients.map(ing => {
+                        const isExcluded = excludedIngredients.includes(ing);
+                        return (
+                          <button
+                            key={ing}
+                            type="button"
+                            onClick={() => setExcludedIngredients(prev => prev.includes(ing) ? prev.filter(x => x !== ing) : [...prev, ing])}
+                            className={`px-3 py-1.5 rounded-full border text-[10px] font-black transition-colors ${
+                              isExcluded ? 'bg-rose-100 border-rose-300 text-rose-700 dark:bg-rose-950/30 dark:border-rose-900 dark:text-rose-400' : 'bg-white border-gray-200 text-gray-500 dark:bg-slate-800 dark:border-slate-700 dark:text-gray-400'
+                            }`}
+                          >
+                            {isExcluded ? '❌' : '✅'} Sin {ing}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {item.extraIngredients && item.extraIngredients.length > 0 && (
+                  <div className="space-y-1.5 border-t border-gray-150 dark:border-slate-800 pt-3">
+                    <label className="text-[10px] font-black text-emerald-600 uppercase tracking-wider block font-bold font-sans">
+                      Añadir Extras (+$):
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {item.extraIngredients.map(ext => {
+                        const isAdded = selectedExtras.includes(ext.name);
+                        return (
+                          <button
+                            key={ext.name}
+                            type="button"
+                            onClick={() => setSelectedExtras(prev => prev.includes(ext.name) ? prev.filter(x => x !== ext.name) : [...prev, ext.name])}
+                            className={`px-3 py-1.5 rounded-full border text-[10px] font-black transition-colors ${
+                              isAdded ? 'bg-emerald-50 border-emerald-300 text-emerald-800 dark:bg-emerald-950/30 dark:border-emerald-800 dark:text-emerald-400' : 'bg-white border-gray-200 text-gray-600 dark:bg-slate-800 dark:border-slate-700 dark:text-gray-300'
+                            }`}
+                          >
+                            {isAdded ? '✓' : '+'} {ext.name} (+${ext.price})
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 )}
 
                 {(item.layout3AllowPolloPiece || item.name.toLowerCase().includes('pollo') || (item.description && item.description.toLowerCase().includes('pollo'))) && (

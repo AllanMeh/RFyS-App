@@ -312,10 +312,32 @@ const LayoutConfigFieldsComponent: React.FC<{
 
   return (
     <div className="space-y-3 bg-amber-50/40 p-3 rounded-xl border border-amber-200/50 text-[11.5px]">
-      
+      <div className="flex items-center gap-2 mb-4 bg-white/50 p-2 rounded-lg border border-amber-100/50">
+        <input 
+          type="checkbox"
+          id="apply-rounding-chk"
+          checked={productObj.applyRounding ?? true}
+          onChange={(e) => updateFn({ ...productObj, applyRounding: e.target.checked })}
+          className="w-4 h-4 text-amber-600 border-gray-300 rounded"
+        />
+        <label htmlFor="apply-rounding-chk" className="text-gray-650 font-bold">Aplicar regla de redondeo a múltiplo de 5 superior en caja</label>
+      </div>
+
       {/* LAYOUT 2: SELECCIÓN POR CANTIDADES */}
       {layout === 'layout_2_cantidades' && (
         <>
+          <div className="mb-3">
+            <label className="text-gray-500 font-bold block mb-1">Ícono del layout en POS:</label>
+            <select
+              value={productObj.layoutIcon || 'none'}
+              onChange={(e) => updateFn({ ...productObj, layoutIcon: e.target.value })}
+              className="bg-white text-gray-900 w-full p-2 border border-gray-300 rounded-lg text-xs"
+            >
+              <option value="none">Ninguno</option>
+              <option value="taco">Taco 🌮</option>
+              <option value="custom">Personalizado ✨</option>
+            </select>
+          </div>
           <div>
             <label className="text-gray-500 font-bold block">Opciones (Formato: Nombre:Precio, ej. Suadero:15, Bistec:15):</label>
             <input 
@@ -349,16 +371,6 @@ const LayoutConfigFieldsComponent: React.FC<{
               }}
               className="bg-white text-gray-900 w-full mt-1 p-2 border border-gray-300 rounded-lg text-xs"
             />
-          </div>
-          <div className="flex items-center gap-2">
-            <input 
-              type="checkbox"
-              id="apply-rounding-chk"
-              checked={productObj.applyRounding ?? true}
-              onChange={(e) => updateFn({ ...productObj, applyRounding: e.target.checked })}
-              className="w-4 h-4 text-amber-600 border-gray-300 rounded"
-            />
-            <label htmlFor="apply-rounding-chk" className="text-gray-650 font-bold">Aplicar regla de redondeo a múltiplo de 5 superior</label>
           </div>
 
           {/* Active toggling list */}
@@ -1010,6 +1022,69 @@ const LayoutConfigFieldsComponent: React.FC<{
           )}
         </div>
       )}
+
+      {/* UNIVERSAL INGREDIENTS CONFIGURATION FOR ALL LAYOUTS */}
+      <div className="space-y-4 border-t border-dashed border-gray-300 pt-4 mt-4">
+        <h4 className="font-bold text-gray-700 text-[11px] uppercase">Configuración Universal de Ingredientes</h4>
+        
+        <div>
+          <label className="text-gray-500 font-bold block">Ingredientes Base Incluidos (Formato: Nombre, Nombre):</label>
+          <input 
+            type="text"
+            placeholder="Ej: Pan, Mayonesa, Frijoles"
+            value={(productObj.baseIngredients || []).join(', ')}
+            onChange={(e) => {
+              const val = e.target.value;
+              updateFn({
+                ...productObj,
+                baseIngredients: val.split(',').map(s => s.trim()).filter(Boolean)
+              });
+            }}
+            className="bg-white text-gray-900 w-full mt-1 p-2 border border-gray-300 rounded-lg text-xs"
+          />
+        </div>
+
+        <div>
+          <label className="text-gray-500 font-bold block">Ingredientes Removibles (Formato: Nombre, Nombre):</label>
+          <input 
+            type="text"
+            placeholder="Ej: Cebolla, Jitomate, Picante"
+            value={(productObj.removableIngredients || []).join(', ')}
+            onChange={(e) => {
+              const val = e.target.value;
+              updateFn({
+                ...productObj,
+                removableIngredients: val.split(',').map(s => s.trim()).filter(Boolean)
+              });
+            }}
+            className="bg-white text-gray-900 w-full mt-1 p-2 border border-gray-300 rounded-lg text-xs"
+          />
+        </div>
+
+        <div>
+          <label className="text-gray-500 font-bold block">Ingredientes Extra Opcionales (Formato: Nombre:Precio, ej. Queso:10):</label>
+          <input 
+            type="text"
+            placeholder="Ej: Queso Extra:10, Aguacate:15"
+            value={(productObj.extraIngredients || []).map((x: any) => `${x.name}:${x.price}`).join(', ')}
+            onChange={(e) => {
+              const val = e.target.value;
+              const parsed = val.split(',').map(item => {
+                const [name, priceStr] = item.split(':');
+                const price = parseFloat(priceStr?.trim()) || 0;
+                const nameTrim = name?.trim();
+                if (!nameTrim) return null;
+                return { name: nameTrim, price };
+              }).filter(Boolean);
+              updateFn({
+                ...productObj,
+                extraIngredients: parsed
+              });
+            }}
+            className="bg-white text-gray-900 w-full mt-1 p-2 border border-gray-300 rounded-lg text-xs"
+          />
+        </div>
+      </div>
 
     </div>
   );

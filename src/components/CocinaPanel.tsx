@@ -101,7 +101,36 @@ export default function CocinaPanel({ orders, onUpdateStatus, onCancelOrder }: C
   const preppingOrders = orders.filter(o => o.status === 'En preparación');
   const activeOrders = orders
     .filter(o => o.status === 'Pendiente' || o.status === 'En preparación')
-    .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    .sort((a, b) => {
+      const getTargetTime = (order: Order) => {
+        let target = new Date(order.timestamp);
+        target.setMinutes(target.getMinutes() + 15);
+        if (order.notes) {
+          const parts = order.notes.split(' | ');
+          const entregaPart = parts.find(p => p.startsWith('Entrega:'));
+          if (entregaPart) {
+            const val = entregaPart.replace('Entrega:', '').trim();
+            if (val.toLowerCase() === 'ahora') {
+              return 0; // Prioritize ASAP absolutely
+            } else {
+              const timeMatch = val.match(/(\d+):(\d+)/);
+              if (timeMatch) {
+                const customDate = new Date(order.timestamp);
+                let h = parseInt(timeMatch[1]);
+                const m = parseInt(timeMatch[2]);
+                if (val.toLowerCase().includes('pm') && h !== 12) h += 12;
+                if (val.toLowerCase().includes('am') && h === 12) h = 0;
+                customDate.setHours(h, m, 0, 0);
+                target = customDate;
+              }
+            }
+          }
+        }
+        return target.getTime();
+      };
+      
+      return getTargetTime(a) - getTargetTime(b);
+    });
 
   return (
     <div className="space-y-6">

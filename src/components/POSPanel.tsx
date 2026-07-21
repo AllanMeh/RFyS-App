@@ -440,25 +440,7 @@ export default function POSPanel({
 
   const shouldNotRound = (product: Product) => {
     if (!product) return false;
-    const layout = product.productLayout;
-    if (layout === 'layout_3_platillo' || layout === 'layout_4_huevos' || layout === 'layout_7_calientes' || layout === 'layout_8_aguas' || layout === 'layout_9_jugos') {
-      return true;
-    }
-    if (layout === 'layout_2_cantidades' && product.applyRounding === false) {
-      return true;
-    }
-    const type = product.productType;
-    if (type === 'cafe_olla' || type === 'nescafe' || type === 'te') {
-      return true;
-    }
-    const name = (product.name || '').toLowerCase();
-    const id = (product.id || '').toLowerCase();
-    if (id.includes('olla') || name.includes('café de olla') || name.includes('cafe de olla') ||
-        id.includes('nesc') || name.includes('nescafé') || name.includes('nescafe') ||
-        id.includes('te') || name.includes('té') || name.includes('te ')) {
-      return true;
-    }
-    return false;
+    return product.applyRounding === false;
   };
 
   // Triggering the Configuration Modal For Builders
@@ -478,7 +460,7 @@ export default function POSPanel({
               return {
                 ...itemInCart,
                 quantity: nextQty,
-                subtotal: shouldNotRound(item) ? rawSub : Math.ceil(rawSub / 5) * 5
+                subtotal: rawSub
               };
             }
             return itemInCart;
@@ -488,7 +470,7 @@ export default function POSPanel({
             product: item,
             quantity: 1,
             customizations: [],
-            subtotal: shouldNotRound(item) ? item.price : Math.ceil(item.price / 5) * 5
+            subtotal: item.price
           };
           return [...prev, newCartItem];
         }
@@ -513,7 +495,12 @@ export default function POSPanel({
     setTortillasQty(6);
     setExcludedDefaults([]);
     setSinAzucar(false);
-    setSugarSpoons(0);
+    const lowName = item.name.toLowerCase();
+    if (item.productType === 'cafe_olla' || item.productType === 'nescafe' || lowName.includes('café de olla') || lowName.includes('cafe de olla') || lowName.includes('nescafé') || lowName.includes('nescafe')) {
+      setSugarSpoons(1);
+    } else {
+      setSugarSpoons(0);
+    }
     setSelectedPolloPiece('');
     
     // Initialize chicken piece selector
@@ -665,7 +652,7 @@ export default function POSPanel({
   };
 
   // Real-time calculation inside build state
-  const getCurrentCalculatedPrice = () => {
+  const getBasePrice = () => {
     if (!activeBuilder) return 0;
     
     // Find item
@@ -867,6 +854,23 @@ export default function POSPanel({
     }
   };
 
+  const getCurrentCalculatedPrice = () => {
+    if (!activeBuilder) return 0;
+    const item = products.find(x => x.id === activeBuilder);
+    if (!item) return 0;
+
+    let base = getBasePrice();
+    let extra = 0;
+    if (item.extraIngredients && item.extraIngredients.length > 0) {
+      item.extraIngredients.forEach(ext => {
+        if (selectedExtras.includes(ext.name)) {
+          extra += ext.price;
+        }
+      });
+    }
+    return base + extra;
+  };
+
   // Add customized item to shopping cart list
   const handleAddBuiltItemToCart = () => {
     const item = products.find(x => x.id === activeBuilder);
@@ -939,12 +943,9 @@ export default function POSPanel({
         }
 
         case 'layout_6_proteina': {
-          const flavorAndExtras = selectedExtras.length > 0
-            ? `${selectedFlavor} y ${selectedExtras.join(' y ')}`
-            : selectedFlavor;
           derivedName = item.layoutAllowPresentation && selectedSize
-            ? `${item.name} ${selectedSize} (${flavorAndExtras})`
-            : `${item.name} (${flavorAndExtras})`;
+            ? `${item.name} ${selectedSize} (${selectedFlavor})`
+            : `${item.name} (${selectedFlavor})`;
           
           const removed = item.layout6Removables?.filter(r => excludedDefaults.includes(r.name)).map(r => r.name);
           if (removed && removed.length > 0) {
@@ -1010,16 +1011,11 @@ export default function POSPanel({
         description: detailsList.join(' | ') || item.description
       };
 
-      const rawSubtotal = calculatedPrice;
-      const finalSubtotal = shouldNotRound(item)
-        ? rawSubtotal 
-        : Math.ceil(rawSubtotal / 5) * 5;
-
       const newCartItem: OrderItem = {
         product: compiledProduct,
         quantity: 1,
         customizations: detailsList,
-        subtotal: finalSubtotal
+        subtotal: calculatedPrice
       };
 
       setCart(prev => [...prev, newCartItem]);
@@ -1038,7 +1034,7 @@ export default function POSPanel({
           const itemPrice = item.price / 3;
           const rawSubtotal = q * itemPrice;
           const tortillaExtra = dobleTortilla ? q * 1 : 0;
-          const calculatedSubtotal = Math.ceil(rawSubtotal / 5) * 5 + tortillaExtra;
+          const calculatedSubtotal = rawSubtotal + tortillaExtra;
           
           const compiledProduct: Product = {
             id: `pos-${type}-${flavor.replace(/\s+/g, '-').toLowerCase()}-${Date.now()}`,
@@ -1127,27 +1123,21 @@ export default function POSPanel({
       if (selectedExtras.length > 0) detailsList.push(`Extras: ${selectedExtras.join(', ')}`);
     } else if (type === 'torta') {
       const baseName = item.name.toLowerCase().includes('torta') ? 'Torta' : 'Sándwich';
-      const flavorAndExtras = selectedExtras.length > 0 
-        ? `${selectedFlavor} y ${selectedExtras.join(' y ')}`
-        : selectedFlavor;
-      derivedName = `${baseName} de ${flavorAndExtras}`;
+      derivedName = `${baseName} de ${selectedFlavor}`;
       if (excludedDefaults.length > 0) {
         detailsList.push(`Sin: ${excludedDefaults.join(', ')}`);
       }
       if (selectedExtras.length > 0) {
-        detailsList.push(`Extras extra (+): ${selectedExtras.join(', ')}`);
+        detailsList.push(`Extras: ${selectedExtras.join(', ')}`);
       }
     } else if (type === 'sandwich') {
       const baseName = item.name.toLowerCase().includes('torta') ? 'Torta' : 'Sándwich';
-      const flavorAndExtras = selectedExtras.length > 0 
-        ? `${selectedFlavor} y ${selectedExtras.join(' y ')}`
-        : selectedFlavor;
-      derivedName = `${baseName} ${selectedSize} (${flavorAndExtras})`;
+      derivedName = `${baseName} ${selectedSize} (${selectedFlavor})`;
       if (excludedDefaults.length > 0) {
         detailsList.push(`Sin: ${excludedDefaults.join(', ')}`);
       }
       if (selectedExtras.length > 0) {
-        detailsList.push(`Extras extra (+): ${selectedExtras.join(', ')}`);
+        detailsList.push(`Extras: ${selectedExtras.join(', ')}`);
       }
     } else if (type === 'caliente_olla') {
       derivedName = `Café de Olla (${selectedSize}${withMilk ? ' con Leche' : ''})`;
@@ -1180,6 +1170,12 @@ export default function POSPanel({
         detailsList.push(`Sin: ${excludedIngredients.join(', ')}`);
       }
     }
+    if (excludedDefaults.length > 0 && item.productLayout !== 'layout_6_proteina') {
+      detailsList.push(`Sin: ${excludedDefaults.join(', ')}`);
+    }
+    if (selectedExtras.length > 0 && item.productLayout !== 'layout_6_proteina') {
+      detailsList.push(`Extras: ${selectedExtras.join(', ')}`);
+    }
 
     const isPollo = item.layout3AllowPolloPiece || item.name.toLowerCase().includes('pollo') || (item.description && item.description.toLowerCase().includes('pollo'));
     if (isPollo && selectedPolloPiece) {
@@ -1196,14 +1192,11 @@ export default function POSPanel({
       description: detailsList.join(' | ') || item.description
     };
 
-    const rawSubtotal = calculatedPrice;
-    const finalSubtotal = shouldNotRound(item) ? rawSubtotal : Math.ceil(rawSubtotal / 5) * 5;
-
     const newCartItem: OrderItem = {
       product: compiledProduct,
       quantity: 1,
       customizations: detailsList,
-      subtotal: finalSubtotal
+      subtotal: calculatedPrice
     };
 
     setCart(prev => [...prev, newCartItem]);
@@ -1220,14 +1213,13 @@ export default function POSPanel({
             const hasDoble = item.customizations?.some(c => c.toLowerCase().includes('doble tortilla')) || item.product.name.toLowerCase().includes('doble');
             const orderPrice = item.product.price * 3;
             const baseSub = getTacos40Price(nextQty, orderPrice);
-            sub = Math.ceil((baseSub + (hasDoble ? nextQty * 1 : 0)) / 5) * 5;
+            sub = baseSub + (hasDoble ? nextQty * 1 : 0);
           } else if (item.product.id.includes('tacos45') || item.product.id.includes('t45')) {
             const hasDoble = item.customizations?.some(c => c.toLowerCase().includes('doble tortilla')) || item.product.name.toLowerCase().includes('doble');
             const baseSub = nextQty * item.product.price;
-            sub = Math.ceil((baseSub + (hasDoble ? nextQty * 1 : 0)) / 5) * 5;
+            sub = baseSub + (hasDoble ? nextQty * 1 : 0);
           } else {
-            const rawSubtotal = nextQty * item.product.price;
-            sub = shouldNotRound(item.product) ? rawSubtotal : Math.ceil(rawSubtotal / 5) * 5;
+            sub = nextQty * item.product.price;
           }
           return {
             ...item,
@@ -1247,7 +1239,7 @@ export default function POSPanel({
 
   // Compute invoice pricing
   const subtotal = cart.reduce((sub, item) => sub + item.subtotal, 0);
-  const total = Math.max(0, Math.ceil((subtotal - discountAmount) / 5) * 5);
+  const total = Math.max(0, subtotal - discountAmount);
 
   // Submit Order details to cocina and database queues
   const handleKitchenDispatchOrder = (paymentType: 'Efectivo' | 'Tarjeta' | 'Crédito' | 'Mixto') => {
@@ -1760,7 +1752,7 @@ export default function POSPanel({
         const calculatedPrice = getCurrentCalculatedPrice();
                 const displayedPrice = shouldNotRound(item)
           ? calculatedPrice
-          : Math.ceil(calculatedPrice / 5) * 5;
+          : calculatedPrice;
 
         const totalPieces = (
           item.productLayout === 'layout_2_cantidades' || 
@@ -1802,9 +1794,11 @@ export default function POSPanel({
                             return (
                               <div key={opt.name} className="bg-white rounded-xl border border-gray-155 p-3 flex items-center justify-between shadow-sm hover:border-amber-300 transition-colors">
                                 <div className="flex items-center gap-2.5">
-                                  <div className="w-8 h-8 bg-amber-50 rounded-lg flex items-center justify-center text-lg select-none">
-                                    🌮
-                                  </div>
+                                  {item.layoutIcon !== 'none' && (
+                                    <div className="w-8 h-8 bg-amber-50 rounded-lg flex items-center justify-center text-lg select-none">
+                                      {item.layoutIcon === 'taco' ? '🌮' : item.layoutIcon === 'custom' ? '✨' : '🌮'}
+                                    </div>
+                                  )}
                                   <div>
                                     <span className="text-xs font-sans font-black text-gray-900 block">{opt.name}</span>
                                     <span className="text-[10px] text-gray-400 font-mono tracking-tight">${opt.price.toFixed(2)} c/u</span>

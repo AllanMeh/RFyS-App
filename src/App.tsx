@@ -674,11 +674,17 @@ export default function App() {
     let resolvedId = clientId || '';
 
     if (clientAccounts) {
-      const account = clientAccounts.find(acc =>
-        (clientId && (acc.id === clientId || acc.phone === clientId)) ||
-        (clientPhone && acc.phone === clientPhone) ||
-        (cleanName && acc.name.toLowerCase().trim() === cleanName.toLowerCase())
-      );
+      let account = null;
+      if (clientId) {
+        account = clientAccounts.find(acc => acc.id === clientId || acc.phone === clientId);
+      }
+      if (!account && clientPhone) {
+        account = clientAccounts.find(acc => acc.phone === clientPhone);
+      }
+      if (!account && cleanName) {
+        account = clientAccounts.find(acc => acc.name.toLowerCase().trim() === cleanName.toLowerCase());
+      }
+      
       if (account) {
         if (account.name) resolvedName = account.name;
         if (account.phone) resolvedPhone = account.phone;
