@@ -457,20 +457,22 @@ export default function POSPanel({
             if (idx === existingIdx) {
               const nextQty = itemInCart.quantity + 1;
               const rawSub = nextQty * item.price;
+              const finalSub = shouldNotRound(item) ? rawSub : Math.ceil(rawSub / 5) * 5;
               return {
                 ...itemInCart,
                 quantity: nextQty,
-                subtotal: rawSub
+                subtotal: finalSub
               };
             }
             return itemInCart;
           });
         } else {
+          const finalSub = shouldNotRound(item) ? item.price : Math.ceil(item.price / 5) * 5;
           const newCartItem: OrderItem = {
             product: item,
             quantity: 1,
             customizations: [],
-            subtotal: item.price
+            subtotal: finalSub
           };
           return [...prev, newCartItem];
         }
@@ -495,9 +497,8 @@ export default function POSPanel({
     setTortillasQty(6);
     setExcludedDefaults([]);
     setSinAzucar(false);
-    const lowName = item.name.toLowerCase();
-    if (item.productType === 'cafe_olla' || item.productType === 'nescafe' || lowName.includes('café de olla') || lowName.includes('cafe de olla') || lowName.includes('nescafé') || lowName.includes('nescafe')) {
-      setSugarSpoons(1);
+    if (item.layout7AllowSugar) {
+      setSugarSpoons(2);
     } else {
       setSugarSpoons(0);
     }
@@ -949,14 +950,14 @@ export default function POSPanel({
           
           const removed = item.layout6Removables?.filter(r => excludedDefaults.includes(r.name)).map(r => r.name);
           if (removed && removed.length > 0) {
-            detailsList.push(`Sin: ${removed.join(', ')}`);
+            removed.forEach(r => detailsList.push(`Sin ${r.toLowerCase()}`));
           }
           const activeExtras = selectedExtras.filter(e => {
             const eConfig = item.layout6Extras?.find(x => x.name === e);
             return eConfig && eConfig.active !== false;
           });
           if (activeExtras.length > 0) {
-            detailsList.push(`Extras: ${activeExtras.join(', ')}`);
+            activeExtras.forEach(e => detailsList.push(e));
           }
           break;
         }
@@ -1001,11 +1002,13 @@ export default function POSPanel({
         detailsList.push(`Pieza: ${selectedPolloPiece}`);
       }
 
+      const finalPrice = shouldNotRound(item) ? calculatedPrice : Math.ceil(calculatedPrice / 5) * 5;
+
       const compiledProduct: Product = {
         id: item.id,
         name: derivedName,
         category: item.category,
-        price: calculatedPrice,
+        price: finalPrice,
         image: item.image,
         active: true,
         description: detailsList.join(' | ') || item.description
@@ -1015,7 +1018,7 @@ export default function POSPanel({
         product: compiledProduct,
         quantity: 1,
         customizations: detailsList,
-        subtotal: calculatedPrice
+        subtotal: finalPrice
       };
 
       setCart(prev => [...prev, newCartItem]);
@@ -1125,19 +1128,19 @@ export default function POSPanel({
       const baseName = item.name.toLowerCase().includes('torta') ? 'Torta' : 'Sándwich';
       derivedName = `${baseName} de ${selectedFlavor}`;
       if (excludedDefaults.length > 0) {
-        detailsList.push(`Sin: ${excludedDefaults.join(', ')}`);
+        excludedDefaults.forEach(e => detailsList.push(`Sin ${e.toLowerCase()}`));
       }
       if (selectedExtras.length > 0) {
-        detailsList.push(`Extras: ${selectedExtras.join(', ')}`);
+        selectedExtras.forEach(e => detailsList.push(e));
       }
     } else if (type === 'sandwich') {
       const baseName = item.name.toLowerCase().includes('torta') ? 'Torta' : 'Sándwich';
       derivedName = `${baseName} ${selectedSize} (${selectedFlavor})`;
       if (excludedDefaults.length > 0) {
-        detailsList.push(`Sin: ${excludedDefaults.join(', ')}`);
+        excludedDefaults.forEach(e => detailsList.push(`Sin ${e.toLowerCase()}`));
       }
       if (selectedExtras.length > 0) {
-        detailsList.push(`Extras: ${selectedExtras.join(', ')}`);
+        selectedExtras.forEach(e => detailsList.push(e));
       }
     } else if (type === 'caliente_olla') {
       derivedName = `Café de Olla (${selectedSize}${withMilk ? ' con Leche' : ''})`;
@@ -1170,11 +1173,11 @@ export default function POSPanel({
         detailsList.push(`Sin: ${excludedIngredients.join(', ')}`);
       }
     }
-    if (excludedDefaults.length > 0 && item.productLayout !== 'layout_6_proteina') {
-      detailsList.push(`Sin: ${excludedDefaults.join(', ')}`);
+    if (excludedDefaults.length > 0) {
+      excludedDefaults.forEach(e => detailsList.push(`Sin ${e.toLowerCase()}`));
     }
-    if (selectedExtras.length > 0 && item.productLayout !== 'layout_6_proteina') {
-      detailsList.push(`Extras: ${selectedExtras.join(', ')}`);
+    if (selectedExtras.length > 0) {
+      selectedExtras.forEach(e => detailsList.push(e));
     }
 
     const isPollo = item.layout3AllowPolloPiece || item.name.toLowerCase().includes('pollo') || (item.description && item.description.toLowerCase().includes('pollo'));
@@ -1266,7 +1269,6 @@ export default function POSPanel({
     // Build consolidated notes containing customer order constraints
     const customerNotesMeta = [
       `Tienda: ${tienda}`,
-      `Entrega: ${horaEntrega}`,
       observaciones ? `Obs: ${observaciones}` : null
     ].filter(Boolean).join(' | ');
 
@@ -1286,7 +1288,8 @@ export default function POSPanel({
         mixedPayment,
         clientName: finalClientName,
         clientId: paymentType === 'Crédito' ? selectedClientId : undefined,
-        notes: customerNotesMeta
+        notes: customerNotesMeta,
+        deliveryTime: horaEntrega
       };
 
       if (onSaveEditedOrder) {
@@ -1309,7 +1312,8 @@ export default function POSPanel({
       clientName: finalClientName,
       clientId: paymentType === 'Crédito' ? selectedClientId : undefined,
       timestamp: new Date().toISOString(),
-      notes: customerNotesMeta
+      notes: customerNotesMeta,
+      deliveryTime: horaEntrega
     };
 
     onAddOrder(newOrder);
@@ -1752,7 +1756,7 @@ export default function POSPanel({
         const calculatedPrice = getCurrentCalculatedPrice();
                 const displayedPrice = shouldNotRound(item)
           ? calculatedPrice
-          : calculatedPrice;
+          : Math.ceil(calculatedPrice / 5) * 5;
 
         const totalPieces = (
           item.productLayout === 'layout_2_cantidades' || 
@@ -1794,9 +1798,9 @@ export default function POSPanel({
                             return (
                               <div key={opt.name} className="bg-white rounded-xl border border-gray-155 p-3 flex items-center justify-between shadow-sm hover:border-amber-300 transition-colors">
                                 <div className="flex items-center gap-2.5">
-                                  {item.layoutIcon !== 'none' && (
+                                  {item.layoutIcon === 'taco' && (
                                     <div className="w-8 h-8 bg-amber-50 rounded-lg flex items-center justify-center text-lg select-none">
-                                      {item.layoutIcon === 'taco' ? '🌮' : item.layoutIcon === 'custom' ? '✨' : '🌮'}
+                                      🌮
                                     </div>
                                   )}
                                   <div>
@@ -2153,55 +2157,6 @@ export default function POSPanel({
                           </div>
                         </div>
 
-                        {item.layout6Removables && item.layout6Removables.length > 0 && (
-                          <div>
-                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1 font-bold">Quitar ingredientes (incluidos por defecto):</label>
-                            <div className="grid grid-cols-2 gap-2">
-                              {item.layout6Removables.map(sd => {
-                                const isExcluded = excludedDefaults.includes(sd.name);
-                                return (
-                                  <button
-                                    type="button"
-                                    key={sd.name}
-                                    onClick={() => setExcludedDefaults(prev => prev.includes(sd.name) ? prev.filter(x => x !== sd.name) : [...prev, sd.name])}
-                                    className={`p-2.5 rounded-xl border text-xs font-bold text-left justify-between flex items-center transition ${
-                                      isExcluded ? 'bg-red-50 border-red-200 text-red-800' : 'bg-white border-gray-200 text-gray-700'
-                                    }`}
-                                  >
-                                    <span>{sd.name}</span>
-                                    <span className="text-[10px] font-bold text-gray-400">{isExcluded ? '❌ Quitado' : '✅ Incluido'}</span>
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        )}
-
-                        {item.layout6Extras && item.layout6Extras.filter(e => e.active !== false).length > 0 && (
-                          <div>
-                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1 font-bold">Ingredientes extra adicionales:</label>
-                            <div className="grid grid-cols-3 gap-1.5">
-                              {item.layout6Extras.filter(e => e.active !== false).map(ext => {
-                                const isSel = selectedExtras.includes(ext.name);
-                                return (
-                                  <button
-                                    type="button"
-                                    key={ext.name}
-                                    onClick={() => setSelectedExtras(prev => prev.includes(ext.name) ? prev.filter(x => x !== ext.name) : [...prev, ext.name])}
-                                    className={`p-2 rounded-xl text-[10px] text-center border transition ${
-                                      isSel ? 'bg-emerald-50 border-emerald-400 text-emerald-800 font-extrabold' : 'bg-white border-gray-200 text-gray-750'
-                                    }`}
-                                  >
-                                    {ext.name}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                            <div className="text-[10px] text-gray-450 mt-1 font-semibold">
-                              * Los ingredientes adicionales seleccionados sumarán su costo correspondiente al preparado.
-                            </div>
-                          </div>
-                        )}
                       </div>
                     )}
 

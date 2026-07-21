@@ -96,26 +96,14 @@ export default function EntregasPanel({ orders, clients, onDeliverOrder }: Entre
     return 'Mesa';
   };
 
-  // Target Delivery Time (Hora entrega = timestamp + 15 minutes or from notes)
-  const getHoraEntrega = (timestamp: string, notes?: string) => {
-    if (notes) {
-      const parts = notes.split(' | ');
-      const entregaPart = parts.find(p => p.startsWith('Entrega:'));
-      if (entregaPart) {
-        const val = entregaPart.replace('Entrega:', '').trim();
-        if (val.toLowerCase() === 'ahora') {
-          return 'Ahora';
-        }
-        return val;
-      }
+  // Target Delivery Time (Hora entrega = timestamp + 15 minutes or from deliveryTime)
+  const getHoraEntrega = (order: Order) => {
+    if (order.deliveryTime) {
+      return order.deliveryTime;
     }
-    try {
-      const d = new Date(timestamp);
-      d.setMinutes(d.getMinutes() + 15);
-      return d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true });
-    } catch (e) {
-      return '12:15 PM';
-    }
+    const d = new Date(order.timestamp);
+    d.setMinutes(d.getMinutes() + 15);
+    return d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true });
   };
 
   // Send an order to Route
@@ -158,29 +146,22 @@ export default function EntregasPanel({ orders, clients, onDeliverOrder }: Entre
   };
 
   const getOrderSortTime = (order: Order) => {
-    let target = new Date(order.timestamp);
-    target.setMinutes(target.getMinutes() + 15);
-    if (order.notes) {
-      const parts = order.notes.split(' | ');
-      const entregaPart = parts.find(p => p.startsWith('Entrega:'));
-      if (entregaPart) {
-        const val = entregaPart.replace('Entrega:', '').trim();
-        if (val.toLowerCase() === 'ahora') {
-          return 0; // Prioritize ASAP absolutely
-        } else {
-          const timeMatch = val.match(/(\d+):(\d+)/);
-          if (timeMatch) {
-            const customDate = new Date(order.timestamp);
-            let h = parseInt(timeMatch[1]);
-            const m = parseInt(timeMatch[2]);
-            if (val.toLowerCase().includes('pm') && h !== 12) h += 12;
-            if (val.toLowerCase().includes('am') && h === 12) h = 0;
-            customDate.setHours(h, m, 0, 0);
-            target = customDate;
-          }
-        }
+    if (order.deliveryTime) {
+      const val = order.deliveryTime.toLowerCase();
+      if (val === 'ahora') return 0;
+      const timeMatch = val.match(/(\d+):(\d+)/);
+      if (timeMatch) {
+        const customDate = new Date(order.timestamp);
+        let h = parseInt(timeMatch[1]);
+        const m = parseInt(timeMatch[2]);
+        if (val.includes('pm') && h !== 12) h += 12;
+        if (val.includes('am') && h === 12) h = 0;
+        customDate.setHours(h, m, 0, 0);
+        return customDate.getTime();
       }
     }
+    let target = new Date(order.timestamp);
+    target.setMinutes(target.getMinutes() + 15);
     return target.getTime();
   };
 
@@ -279,25 +260,25 @@ export default function EntregasPanel({ orders, clients, onDeliverOrder }: Entre
           </div>
         ) : (
           renderedOrders.map((order) => {
-            const horaEntrega = getHoraEntrega(order.timestamp, order.notes);
+            const horaEntrega = getHoraEntrega(order);
             const storeName = getOrderBranch(order);
             let cleanClientName = order.clientName?.trim() || 'Cliente';
             cleanClientName = cleanClientName.replace(/\s*\([^)]+\)$/, '').trim();
 
             let targetDate = new Date(order.timestamp);
             targetDate.setMinutes(targetDate.getMinutes() + 15);
-            if (order.notes) {
-              const parts = order.notes.split(' | ');
-              const entregaPart = parts.find(p => p.startsWith('Entrega:'));
-              if (entregaPart) {
-                const val = entregaPart.replace('Entrega:', '').trim();
-                if (val.toLowerCase() !== 'ahora') {
-                  const timeMatch = val.match(/(\d+):(\d+)/);
-                  if (timeMatch) {
-                    const customDate = new Date(order.timestamp);
-                    customDate.setHours(parseInt(timeMatch[1]), parseInt(timeMatch[2]), 0, 0);
-                    targetDate = customDate;
-                  }
+            if (order.deliveryTime) {
+              const val = order.deliveryTime.toLowerCase();
+              if (val !== 'ahora') {
+                const timeMatch = val.match(/(\d+):(\d+)/);
+                if (timeMatch) {
+                  const customDate = new Date(order.timestamp);
+                  let h = parseInt(timeMatch[1]);
+                  const m = parseInt(timeMatch[2]);
+                  if (val.includes('pm') && h !== 12) h += 12;
+                  if (val.includes('am') && h === 12) h = 0;
+                  customDate.setHours(h, m, 0, 0);
+                  targetDate = customDate;
                 }
               }
             }
@@ -309,7 +290,7 @@ export default function EntregasPanel({ orders, clients, onDeliverOrder }: Entre
             let filteredNotes = '';
             if (order.notes) {
               const parts = order.notes.split(' | ');
-              filteredNotes = parts.filter(p => !p.startsWith('Tienda:') && !p.startsWith('Entrega:')).join(' | ').trim();
+              filteredNotes = parts.filter(p => !p.startsWith('Tienda:')).join(' | ').trim();
             }
 
             // Card theme matching CocinaPanel style
@@ -373,7 +354,7 @@ export default function EntregasPanel({ orders, clients, onDeliverOrder }: Entre
                       <div key={idx} className="flex items-center gap-2">
                         <span className="text-[10px] font-black text-amber-400 shrink-0">{it.quantity}x</span>
                         {(() => {
-                          const isLegacyGuisado = it.product.name.match(/^\d+\s+[^,]+(?:,\s*\d+\s+[^,]+)*$/) && !it.product.name.toLowerCase().includes('torta') && !it.product.name.toLowerCase().includes('sandwich');
+                          const isLegacyGuisado = it.product.name.trim().match(/^\d+\s+[^,]+/) && !it.product.name.toLowerCase().includes('torta') && !it.product.name.toLowerCase().includes('sandwich');
                           const displayName = isLegacyGuisado ? 'TACOS DE GUISADO' : it.product.name;
                           const customList = isLegacyGuisado ? [it.product.name, ...it.customizations] : it.customizations;
 
@@ -512,7 +493,7 @@ export default function EntregasPanel({ orders, clients, onDeliverOrder }: Entre
                       <span className="font-bold text-gray-950 dark:text-slate-100">{item.quantity}x</span> 
                       <div className="flex-1">
                           {(() => {
-                            const isLegacyGuisado = item.product.name.match(/^\d+\s+[^,]+(?:,\s*\d+\s+[^,]+)*$/) && !item.product.name.toLowerCase().includes('torta') && !item.product.name.toLowerCase().includes('sandwich');
+                            const isLegacyGuisado = item.product.name.trim().match(/^\d+\s+[^,]+/) && !item.product.name.toLowerCase().includes('torta') && !item.product.name.toLowerCase().includes('sandwich');
                             const displayName = isLegacyGuisado ? 'TACOS DE GUISADO' : item.product.name;
                             const customList = isLegacyGuisado ? [item.product.name, ...item.customizations] : item.customizations;
 

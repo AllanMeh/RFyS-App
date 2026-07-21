@@ -23,6 +23,7 @@ function toRow(o: Order): Record<string, unknown> {
     client_id:      o.clientId ?? null,
     timestamp:      o.timestamp,
     notes:          o.notes ?? null,
+    delivery_time:  o.deliveryTime ?? null,
   };
 }
 
@@ -41,6 +42,7 @@ function fromRow(r: Record<string, unknown>): Order {
     clientId:      r['client_id'] as string | undefined,
     timestamp:     r['timestamp'] as string,
     notes:         r['notes'] as string | undefined,
+    deliveryTime:  r['delivery_time'] as string | undefined,
   };
 }
 

@@ -625,9 +625,8 @@ export default function ClientPanel({
       setTortillasQty(6);
       setExcludedDefaults([]);
       setSinAzucar(false);
-      const lowName = product.name.toLowerCase();
-      if (product.productType === 'cafe_olla' || product.productType === 'nescafe' || lowName.includes('café de olla') || lowName.includes('cafe de olla') || lowName.includes('nescafé') || lowName.includes('nescafe')) {
-        setSugarSpoons(1);
+      if (product.layout7AllowSugar) {
+        setSugarSpoons(2);
       } else {
         setSugarSpoons(0);
       }
@@ -721,20 +720,22 @@ export default function ClientPanel({
           if (idx === existingIdx) {
             const nextQty = item.quantity + 1;
             const rawSub = nextQty * product.price;
+            const finalSub = shouldNotRound(product) ? rawSub : Math.ceil(rawSub / 5) * 5;
             return {
               ...item,
               quantity: nextQty,
-              subtotal: rawSub
+              subtotal: finalSub
             };
           }
           return item;
         });
       }
+      const finalSub = shouldNotRound(product) ? product.price : Math.ceil(product.price / 5) * 5;
       return [...prev, {
         product,
         quantity: 1,
         customizations: [],
-        subtotal: product.price
+        subtotal: finalSub
       }];
     });
 
@@ -818,14 +819,14 @@ export default function ClientPanel({
           
           const removed = item.layout6Removables?.filter(r => excludedDefaults.includes(r.name)).map(r => r.name);
           if (removed && removed.length > 0) {
-            detailsList.push(`Sin: ${removed.join(', ')}`);
+            removed.forEach(r => detailsList.push(`Sin ${r.toLowerCase()}`));
           }
           const activeExtras = selectedExtras.filter(e => {
             const eConfig = item.layout6Extras?.find(x => x.name === e);
             return eConfig && eConfig.active !== false;
           });
           if (activeExtras.length > 0) {
-            detailsList.push(`Extras: ${activeExtras.join(', ')}`);
+            activeExtras.forEach(e => detailsList.push(e));
           }
           break;
         }
@@ -865,11 +866,11 @@ export default function ClientPanel({
         }
       }
 
-      if (excludedIngredients.length > 0 && item.productLayout !== 'layout_6_proteina') {
-        detailsList.push(`Sin: ${excludedIngredients.join(', ')}`);
+      if (excludedIngredients.length > 0) {
+        excludedIngredients.forEach(exc => detailsList.push(`Sin ${exc.toLowerCase()}`));
       }
-      if (selectedExtras.length > 0 && item.productLayout !== 'layout_6_proteina') {
-        detailsList.push(`Extras: ${selectedExtras.join(', ')}`);
+      if (selectedExtras.length > 0) {
+        selectedExtras.forEach(e => detailsList.push(e));
       }
 
       const isPollo = item.layout3AllowPolloPiece || item.name.toLowerCase().includes('pollo') || (item.description && item.description.toLowerCase().includes('pollo'));
@@ -877,18 +878,20 @@ export default function ClientPanel({
         detailsList.push(`Pieza: ${selectedPolloPiece}`);
       }
 
+      const finalPrice = shouldNotRound(item) ? calculatedPrice : Math.ceil(calculatedPrice / 5) * 5;
+
       const compiledProduct: Product = {
         id: item.id,
         name: derivedName,
         category: item.category,
-        price: calculatedPrice,
+        price: finalPrice,
         image: item.image,
         active: true,
         description: detailsList.join(' | ') || item.description
       };
 
       const rawSubtotal = calculatedPrice;
-      const finalSubtotal = rawSubtotal;
+      const finalSubtotal = finalPrice;
 
       setClientCart(prev => [...prev, {
         product: compiledProduct,
@@ -1014,7 +1017,8 @@ export default function ClientPanel({
       clientName: activeClient.name,
       clientId: activeClient.id, // Corrección: Usar ID real ('CRED-...') que existe en la tabla clientes
       timestamp: new Date().toISOString(),
-      notes: `Tienda: ${activeClient.defaultStore} | Canales: Portal Cliente | Entrega: ${horaEntrega}`
+      notes: `Tienda: ${activeClient.defaultStore} | Canales: Portal Cliente`,
+      deliveryTime: horaEntrega
     };
 
     try {
@@ -1142,13 +1146,13 @@ export default function ClientPanel({
             /* REGISTER FORM */
             <form onSubmit={handleRegisterSubmit} className="space-y-3.5 text-left max-h-[50vh] overflow-y-auto pr-1">
               <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase text-gray-500 tracking-wider">Nombre Completo:</label>
+                <label className="text-[10px] font-black uppercase text-gray-500 tracking-wider">Nombre:</label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input 
                     type="text" 
                     required
-                    placeholder="Tu nombre completo"
+                    placeholder="Tu nombre"
                     value={regName}
                     onChange={(e) => setRegName(e.target.value)}
                     className="w-full bg-slate-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 pl-10 pr-4 py-2.5 rounded-xl text-xs focus:ring-1 focus:ring-amber-500 focus:outline-none text-gray-800 dark:text-gray-150"
@@ -1875,7 +1879,7 @@ export default function ClientPanel({
               
               <div className="space-y-3.5 text-xs">
                 <div>
-                  <span className="text-gray-400 font-bold block">Nombre Completo:</span>
+                  <span className="text-gray-400 font-bold block">Nombre:</span>
                   <span className="font-bold text-gray-900 dark:text-white text-[13px]">{activeClient.name}</span>
                 </div>
                 <div>
@@ -2049,7 +2053,7 @@ export default function ClientPanel({
         const calculatedPrice = getCurrentClientCalculatedPrice();
         const displayedPrice = shouldNotRound(item)
           ? calculatedPrice
-          : calculatedPrice;
+          : Math.ceil(calculatedPrice / 5) * 5;
 
         const totalPieces = (
           item.productLayout === 'layout_2_cantidades'
@@ -2083,9 +2087,9 @@ export default function ClientPanel({
                             return (
                               <div key={opt.name} className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 p-3 flex items-center justify-between shadow-xs hover:border-amber-305 transition-colors">
                                 <div className="flex items-center gap-2.5">
-                                  {item.layoutIcon !== 'none' && (
+                                  {item.layoutIcon === 'taco' && (
                                     <div className="w-8 h-8 bg-amber-50 dark:bg-slate-700 rounded-lg flex items-center justify-center text-lg select-none">
-                                      {item.layoutIcon === 'taco' ? '🌮' : item.layoutIcon === 'custom' ? '✨' : '🌮'}
+                                      🌮
                                     </div>
                                   )}
                                   <div>
@@ -2442,55 +2446,6 @@ export default function ClientPanel({
                           </div>
                         </div>
 
-                        {item.layout6Removables && item.layout6Removables.length > 0 && (
-                          <div>
-                            <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1 font-bold">Quitar ingredientes (incluidos por defecto):</label>
-                            <div className="grid grid-cols-2 gap-2">
-                              {item.layout6Removables.map(sd => {
-                                const isExcluded = excludedDefaults.includes(sd.name);
-                                return (
-                                  <button
-                                    type="button"
-                                    key={sd.name}
-                                    onClick={() => setExcludedDefaults(prev => prev.includes(sd.name) ? prev.filter(x => x !== sd.name) : [...prev, sd.name])}
-                                    className={`p-2.5 rounded-xl border text-xs font-bold text-left justify-between flex items-center transition ${
-                                      isExcluded ? 'bg-red-50 dark:bg-red-955/20 border-red-200 dark:border-red-900 text-red-800 dark:text-red-400 font-extrabold' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-300'
-                                    }`}
-                                  >
-                                    <span>{sd.name}</span>
-                                    <span className="text-[10px] font-bold text-gray-400">{isExcluded ? '❌ Quitado' : '✅ Incluido'}</span>
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        )}
-
-                        {item.layout6Extras && item.layout6Extras.filter(e => e.active !== false).length > 0 && (
-                          <div>
-                            <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1 font-bold">Ingredientes extra adicionales:</label>
-                            <div className="grid grid-cols-3 gap-1.5">
-                              {item.layout6Extras.filter(e => e.active !== false).map(ext => {
-                                const isSel = selectedExtras.includes(ext.name);
-                                return (
-                                  <button
-                                    type="button"
-                                    key={ext.name}
-                                    onClick={() => setSelectedExtras(prev => prev.includes(ext.name) ? prev.filter(x => x !== ext.name) : [...prev, ext.name])}
-                                    className={`p-2 rounded-xl text-[10px] text-center border transition ${
-                                      isSel ? 'bg-emerald-50 dark:bg-emerald-955/20 border-emerald-400 dark:border-emerald-700 text-emerald-800 dark:text-emerald-450 font-extrabold' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-750 dark:text-gray-300'
-                                    }`}
-                                  >
-                                    {ext.name}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                            <div className="text-[10px] text-gray-450 dark:text-gray-400 mt-1 font-semibold">
-                              * Los ingredientes adicionales seleccionados sumarán su costo correspondiente al preparado.
-                            </div>
-                          </div>
-                        )}
                       </div>
                     )}
 

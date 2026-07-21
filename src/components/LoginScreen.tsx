@@ -88,7 +88,7 @@ export default function LoginScreen({ onLogin, clientAccounts, onClientLogin, on
     setError('');
 
     if (!clientName.trim()) {
-      setError('Por favor, ingresa tu nombre completo.');
+      setError('Por favor, ingresa tu nombre.');
       return;
     }
     if (!selectedStoreName) {

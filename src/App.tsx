@@ -669,7 +669,17 @@ export default function App() {
 
     // Enrich from clientAccounts when available
     let resolvedName = cleanName;
-    let resolvedPhone = clientPhone || 'Sin teléfono';
+    
+    // Extract phone from clientId if it follows CRED-phone pattern
+    let extractedPhone = clientPhone;
+    if (!extractedPhone && clientId && clientId.startsWith('CRED-')) {
+      const parts = clientId.split('-');
+      if (parts.length > 1 && /^\d+$/.test(parts[1])) {
+        extractedPhone = parts[1];
+      }
+    }
+    
+    let resolvedPhone = extractedPhone || 'Sin teléfono';
     let resolvedBranch = clientBranch || 'Station #1 - Central';
     let resolvedId = clientId || '';
 
@@ -678,11 +688,8 @@ export default function App() {
       if (clientId) {
         account = clientAccounts.find(acc => acc.id === clientId || acc.phone === clientId);
       }
-      if (!account && clientPhone) {
-        account = clientAccounts.find(acc => acc.phone === clientPhone);
-      }
-      if (!account && cleanName) {
-        account = clientAccounts.find(acc => acc.name.toLowerCase().trim() === cleanName.toLowerCase());
+      if (!account && extractedPhone && extractedPhone !== 'Sin teléfono') {
+        account = clientAccounts.find(acc => acc.phone === extractedPhone);
       }
       
       if (account) {
@@ -708,12 +715,7 @@ export default function App() {
     if (!existing && clientId) {
       existing = clients.find(c => c.phone === clientId || c.id === clientId);
     }
-    // 4. Match by name
-    if (!existing && resolvedName) {
-      existing = clients.find(
-        c => c.name.toLowerCase().trim() === resolvedName.toLowerCase()
-      );
-    }
+    // (Removed Match by name to prevent false merges and overwriting phones)
 
     if (existing) {
       // Patch outdated fields while keeping history intact
@@ -726,7 +728,7 @@ export default function App() {
 
       const patched = {
         ...existing,
-        name: resolvedName || existing.name,
+        name: existing.name, // Do not override name if it changes via ID/phone match
         phone: resolvedPhone !== 'Sin teléfono' ? resolvedPhone : existing.phone,
         branch: resolvedBranch !== 'Station #1 - Central' ? resolvedBranch : existing.branch
       };

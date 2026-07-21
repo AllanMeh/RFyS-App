@@ -54,13 +54,6 @@ export const getAvatarForClient = (
       return { avatar: client.avatar, avatarUrl: client.avatarUrl, name: client.name };
     }
   }
-  if (clientAccounts && clientName) {
-    const cleanName = clientName.replace(/\s*\([^)]*\)/g, '').trim().toLowerCase();
-    const client = clientAccounts.find(c => c.name.toLowerCase().trim() === cleanName);
-    if (client) {
-      return { avatar: client.avatar, avatarUrl: client.avatarUrl, name: client.name };
-    }
-  }
   if (users && clientId) {
     const usr = users.find(u => u.id === clientId);
     if (usr) {

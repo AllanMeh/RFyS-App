@@ -553,7 +553,7 @@ export default function CajaPanel({
       if (order.clientId && (c.id === order.clientId || c.phone === order.clientId)) {
         return true;
       }
-      return c.name.toLowerCase().trim() === cleanName.toLowerCase();
+      return false;
     });
     
     // If not found, search in clientAccounts
@@ -562,13 +562,12 @@ export default function CajaPanel({
         if (order.clientId && (acc.id === order.clientId || acc.phone === order.clientId)) {
           return true;
         }
-        return acc.name.toLowerCase().trim() === cleanName.toLowerCase();
+        return false;
       });
       if (account) {
         existing = clients.find(c => 
           (account.phone && c.phone === account.phone) ||
-          (account.id && c.id === account.id) ||
-          c.name.toLowerCase().trim() === account.name.toLowerCase().trim()
+          (account.id && c.id === account.id)
         );
       }
     }
@@ -593,7 +592,7 @@ export default function CajaPanel({
       if (selectedPendingOrder.clientId && (c.id === selectedPendingOrder.clientId || c.phone === selectedPendingOrder.clientId)) {
         return true;
       }
-      return c.name.toLowerCase().trim() === cleanName.toLowerCase();
+      return false;
     });
     
     // Check if client exists in clientAccounts
@@ -601,14 +600,13 @@ export default function CajaPanel({
       if (selectedPendingOrder.clientId && (acc.id === selectedPendingOrder.clientId || acc.phone === selectedPendingOrder.clientId)) {
         return true;
       }
-      return acc.name.toLowerCase().trim() === cleanName.toLowerCase();
+      return false;
     });
     
     if (existingAccount && !existingDebt) {
       existingDebt = clients.find(c => 
         (existingAccount.phone && c.phone === existingAccount.phone) ||
-        (existingAccount.id && c.id === existingAccount.id) ||
-        c.name.toLowerCase().trim() === existingAccount.name.toLowerCase().trim()
+        (existingAccount.id && c.id === existingAccount.id)
       );
     }
     

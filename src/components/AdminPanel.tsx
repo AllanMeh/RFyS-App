@@ -310,18 +310,7 @@ const LayoutConfigFieldsComponent: React.FC<{
     );
   }
 
-  return (
     <div className="space-y-3 bg-amber-50/40 p-3 rounded-xl border border-amber-200/50 text-[11.5px]">
-      <div className="flex items-center gap-2 mb-4 bg-white/50 p-2 rounded-lg border border-amber-100/50">
-        <input 
-          type="checkbox"
-          id="apply-rounding-chk"
-          checked={productObj.applyRounding ?? true}
-          onChange={(e) => updateFn({ ...productObj, applyRounding: e.target.checked })}
-          className="w-4 h-4 text-amber-600 border-gray-300 rounded"
-        />
-        <label htmlFor="apply-rounding-chk" className="text-gray-650 font-bold">Aplicar regla de redondeo a múltiplo de 5 superior en caja</label>
-      </div>
 
       {/* LAYOUT 2: SELECCIÓN POR CANTIDADES */}
       {layout === 'layout_2_cantidades' && (
@@ -333,9 +322,8 @@ const LayoutConfigFieldsComponent: React.FC<{
               onChange={(e) => updateFn({ ...productObj, layoutIcon: e.target.value })}
               className="bg-white text-gray-900 w-full p-2 border border-gray-300 rounded-lg text-xs"
             >
-              <option value="none">Ninguno</option>
+              <option value="none">Sin icono</option>
               <option value="taco">Taco 🌮</option>
-              <option value="custom">Personalizado ✨</option>
             </select>
           </div>
           <div>
@@ -689,41 +677,6 @@ const LayoutConfigFieldsComponent: React.FC<{
               }}
               className="bg-white text-gray-900 w-full mt-1 p-2 border border-gray-300 rounded-lg text-xs"
             />
-          </div>
-          <div>
-            <label className="text-gray-500 font-bold block">Ingredientes incluidos removibles:</label>
-            <input 
-              type="text"
-              placeholder="Mayonesa, Lechuga, Jitomate, Queso amarillo"
-              value={layout6RemovablesText}
-              onChange={(e) => {
-                const val = e.target.value;
-                setLayout6RemovablesText(val);
-                updateFn({
-                  ...productObj,
-                  layout6Removables: parsePrepsOnly(val, productObj.layout6Removables)
-                });
-              }}
-              className="bg-white text-gray-900 w-full mt-1 p-2 border border-gray-300 rounded-lg text-xs"
-            />
-          </div>
-          <div>
-            <label className="text-gray-500 font-bold block">Ingredientes extra (Formato: Nombre:Precio, ej. Tocino:5):</label>
-            <input 
-              type="text"
-              placeholder="Salchicha:5, Tocino:5, Milanesa:5, Queso Oaxaca:5"
-              value={layout6ExtrasText}
-              onChange={(e) => {
-                const val = e.target.value;
-                setLayout6ExtrasText(val);
-                updateFn({
-                  ...productObj,
-                  layout6Extras: parseLayout2Options(val, productObj.layout6Extras)
-                });
-              }}
-              className="bg-white text-gray-900 w-full mt-1 p-2 border border-gray-300 rounded-lg text-xs"
-            />
-          </div>
         </>
       )}
 
@@ -3243,6 +3196,19 @@ export default function AdminPanel({
                 />
               </div>
 
+              <div className="flex items-center gap-2 bg-amber-50/50 p-3 rounded-lg border border-amber-200/60 mt-3">
+                <input 
+                  type="checkbox"
+                  id="new-product-apply-rounding"
+                  checked={newProductForm.applyRounding ?? true}
+                  onChange={(e) => setNewProductForm({ ...newProductForm, applyRounding: e.target.checked })}
+                  className="w-4 h-4 text-amber-600 border-gray-300 rounded cursor-pointer"
+                />
+                <label htmlFor="new-product-apply-rounding" className="text-gray-700 font-bold text-xs cursor-pointer">
+                  Aplicar regla de redondeo a múltiplo de 5 superior en caja
+                </label>
+              </div>
+
               {/* IMAGE UPLOAD & PREVIEW */}
               <div className="space-y-1">
                 <label className="text-gray-500 font-bold block">Imagen de Producto (Cambiar / Subir / Eliminar):</label>
@@ -3370,6 +3336,19 @@ export default function AdminPanel({
                   onChange={(e) => setEditingProduct({...editingProduct, description: e.target.value})}
                   className="bg-white text-gray-900 w-full mt-1 p-2 border border-gray-300 rounded-lg"
                 />
+              </div>
+
+              <div className="flex items-center gap-2 bg-amber-50/50 p-3 rounded-lg border border-amber-200/60 mt-3">
+                <input 
+                  type="checkbox"
+                  id="edit-product-apply-rounding"
+                  checked={editingProduct.applyRounding ?? true}
+                  onChange={(e) => setEditingProduct({ ...editingProduct, applyRounding: e.target.checked })}
+                  className="w-4 h-4 text-amber-600 border-gray-300 rounded cursor-pointer"
+                />
+                <label htmlFor="edit-product-apply-rounding" className="text-gray-700 font-bold text-xs cursor-pointer">
+                  Aplicar regla de redondeo a múltiplo de 5 superior en caja
+                </label>
               </div>
 
               {/* IMAGE CHANGE, BASE64 UPLOADER AND DELETION ZONE */}

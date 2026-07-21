@@ -112,6 +112,7 @@ export interface Order {
   clientId?: string;
   timestamp: string; // ISO String
   notes?: string;
+  deliveryTime?: string;
 }
 
 export interface Movement {

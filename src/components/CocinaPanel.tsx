@@ -103,30 +103,22 @@ export default function CocinaPanel({ orders, onUpdateStatus, onCancelOrder }: C
     .filter(o => o.status === 'Pendiente' || o.status === 'En preparación')
     .sort((a, b) => {
       const getTargetTime = (order: Order) => {
-        let target = new Date(order.timestamp);
-        target.setMinutes(target.getMinutes() + 15);
-        if (order.notes) {
-          const parts = order.notes.split(' | ');
-          const entregaPart = parts.find(p => p.startsWith('Entrega:'));
-          if (entregaPart) {
-            const val = entregaPart.replace('Entrega:', '').trim();
-            if (val.toLowerCase() === 'ahora') {
-              return 0; // Prioritize ASAP absolutely
-            } else {
-              const timeMatch = val.match(/(\d+):(\d+)/);
-              if (timeMatch) {
-                const customDate = new Date(order.timestamp);
-                let h = parseInt(timeMatch[1]);
-                const m = parseInt(timeMatch[2]);
-                if (val.toLowerCase().includes('pm') && h !== 12) h += 12;
-                if (val.toLowerCase().includes('am') && h === 12) h = 0;
-                customDate.setHours(h, m, 0, 0);
-                target = customDate;
-              }
+        const val = order.deliveryTime;
+        if (val) {
+          if (val.toLowerCase() === 'ahora') {
+            return 0; // Prioritize ASAP absolutely
+          } else {
+            const timeMatch = val.match(/(\d+):(\d+)/);
+            if (timeMatch) {
+              let h = parseInt(timeMatch[1]);
+              const m = parseInt(timeMatch[2]);
+              if (val.toLowerCase().includes('pm') && h !== 12) h += 12;
+              if (val.toLowerCase().includes('am') && h === 12) h = 0;
+              return h * 60 + m; // Total minutes from midnight
             }
           }
         }
-        return target.getTime();
+        return 0; // Fallback to 'Ahora' if no delivery time specified
       };
       
       return getTargetTime(a) - getTargetTime(b);
@@ -264,7 +256,7 @@ export default function CocinaPanel({ orders, onUpdateStatus, onCancelOrder }: C
                         <div className="min-w-0 flex-1">
                           {(() => {
                             // Detect if the product name itself is the string of guisados
-                            const isLegacyGuisado = item.product.name.match(/^\d+\s+[^,]+(?:,\s*\d+\s+[^,]+)*$/) && !item.product.name.toLowerCase().includes('torta') && !item.product.name.toLowerCase().includes('sandwich');
+                            const isLegacyGuisado = item.product.name.trim().match(/^\d+\s+[^,]+/) && !item.product.name.toLowerCase().includes('torta') && !item.product.name.toLowerCase().includes('sandwich');
                             
                             const displayName = isLegacyGuisado ? 'TACOS DE GUISADO' : item.product.name;
                             const customList = isLegacyGuisado ? [item.product.name, ...item.customizations] : item.customizations;
