@@ -310,6 +310,7 @@ const LayoutConfigFieldsComponent: React.FC<{
     );
   }
 
+  return (
     <div className="space-y-3 bg-amber-50/40 p-3 rounded-xl border border-amber-200/50 text-[11.5px]">
 
       {/* LAYOUT 2: SELECCIÓN POR CANTIDADES */}
@@ -677,6 +678,7 @@ const LayoutConfigFieldsComponent: React.FC<{
               }}
               className="bg-white text-gray-900 w-full mt-1 p-2 border border-gray-300 rounded-lg text-xs"
             />
+          </div>
         </>
       )}
 
